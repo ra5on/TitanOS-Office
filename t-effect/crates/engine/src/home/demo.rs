@@ -396,8 +396,8 @@ pub fn demo_project() -> Project {
     let mut title = text_layer(
         &mut p,
         &comp,
-        "EFFECTCRAFT",
-        TextDoc { text: "EFFECTCRAFT".into(), size: 148.0, style: "Bold".into(), tracking: 120.0, justify: Justify::Center, ..Default::default() },
+        "T-EFFECT",
+        TextDoc { text: "T-EFFECT".into(), size: 148.0, style: "Bold".into(), tracking: 120.0, justify: Justify::Center, ..Default::default() },
         [960.0, 560.0],
     );
     let mut next = p.next_id;
