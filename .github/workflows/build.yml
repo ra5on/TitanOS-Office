@@ -1,9 +1,14 @@
 name: Build
 
-# Builds the web versions of T-Word, T-PDF and T-Exel. On a tag vX.Y.Z the
-# three archives (t-<app>-web-X.Y.Z.zip, laid out as TitanOS expects:
-# one folder t-<app>-web-X.Y.Z/ with index.html at its top) and their
-# SHA-256 go into a GitHub release.
+# Builds the web versions of the TitanOS-Office programs. On a tag vX.Y.Z the
+# archives (t-<app>-web-X.Y.Z.zip, laid out as TitanOS expects: one folder
+# t-<app>-web-X.Y.Z/ with index.html at its top) and their SHA-256 go into a
+# GitHub release.
+#
+# Most programs build with Trunk (`kind: trunk`, from apps/<crate>). T-Film,
+# T-Light and T-Effect build like their originals with `cargo xtask web`
+# (cargo build for wasm32, then the wasm-bindgen CLI); `site` is where that
+# puts the finished site, relative to the program's folder.
 
 on:
   push:
@@ -27,19 +32,67 @@ jobs:
   web:
     name: ${{ matrix.app }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         include:
           - app: t-word
             crate: wordcraft-web
+            kind: trunk
+            brand: warn
           - app: t-pdf
             crate: pdfcraft-web
+            kind: trunk
+            brand: warn
           - app: t-exel
             crate: gridcraft-web
+            kind: trunk
+            brand: warn
+          - app: t-deck
+            crate: deckcraft-web
+            kind: trunk
+          - app: t-cad
+            crate: cadcraft-web
+            kind: trunk
+          - app: t-fig
+            crate: figcraft-web
+            kind: trunk
+          - app: t-film
+            crate: filmcraft-web
+            kind: xtask
+            site: target/web/dist
+          - app: t-light
+            crate: lightcraft-web
+            kind: xtask
+            site: target/web-site
+          - app: t-vector
+            crate: vectorcraft-web
+            kind: trunk
+          - app: t-design
+            crate: designcraft-web
+            kind: trunk
+          - app: t-effect
+            crate: effectcraft-web
+            kind: xtask
+            site: target/web/dist
+          - app: t-sound
+            crate: soundcraft-web
+            kind: trunk
+          - app: t-texture
+            crate: texturecraft-web
+            kind: trunk
+          - app: t-material
+            crate: materialcraft-web
+            kind: trunk
     steps:
       - uses: actions/checkout@v4
+
+      # The larger programs need more room for target/ than the runner leaves free.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h /
 
       - name: Version
         id: version
@@ -62,14 +115,31 @@ jobs:
           key: ${{ matrix.app }}
 
       - name: Trunk
+        if: matrix.kind == 'trunk'
         run: |
           curl -fsSL "https://github.com/trunk-rs/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" | tar -xz -C /usr/local/bin trunk
           trunk --version
 
+      # `cargo xtask web` needs the wasm-bindgen CLI at the version in Cargo.lock.
+      - name: wasm-bindgen
+        if: matrix.kind == 'xtask'
+        run: |
+          v="$(awk '$0 == "name = \"wasm-bindgen\"" { getline; gsub(/version = |"/, ""); print; exit }' "${{ matrix.app }}/Cargo.lock")"
+          test -n "$v"
+          url="https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$v/wasm-bindgen-$v-x86_64-unknown-linux-musl.tar.gz"
+          if curl -fsSL "$url" -o /tmp/wb.tar.gz; then
+            tar -xzf /tmp/wb.tar.gz -C /tmp
+            sudo install -m 755 "/tmp/wasm-bindgen-$v-x86_64-unknown-linux-musl/wasm-bindgen" /usr/local/bin/wasm-bindgen
+          else
+            cargo install wasm-bindgen-cli --version "$v" --locked
+          fi
+          wasm-bindgen --version
+
       # The translations (German) live in <app>/i18n: the catalogs of
       # craft-i18n at the commit in craft-i18n.rev, with the app names
       # replaced (see <app>/i18n/README.md). Nothing is fetched from
-      # storytold at build time. Without the folder the app is English only.
+      # storytold at build time. Without the folder the app has only the
+      # catalogs it carries itself (crates/ui-egui).
       - name: Translations
         run: |
           if [[ -d "${{ matrix.app }}/i18n/locales" ]]; then
@@ -80,11 +150,42 @@ jobs:
       - name: Build
         run: |
           site="$GITHUB_WORKSPACE/dist/${{ matrix.app }}"
-          cd "${{ matrix.app }}/apps/${{ matrix.crate }}"
-          trunk build --release --dist "$site" --public-url ./
+          if [[ "${{ matrix.kind }}" == xtask ]]; then
+            cd "${{ matrix.app }}"
+            cargo xtask web
+            mkdir -p "$site"
+            cp -R "${{ matrix.site }}/." "$site/"
+          else
+            cd "${{ matrix.app }}/apps/${{ matrix.crate }}"
+            trunk build --release --dist "$site" --public-url ./
+          fi
           test -f "$site/index.html"
           if grep -Eq '(src|href)="/[^/]' "$site/index.html"; then
             echo "::error::index.html has root-absolute URLs"; exit 1
+          fi
+
+      # The ArtCraft brand must not ship (fork rule of the originals). The
+      # copyright line "ArtCraft Team and the ... contributors" stays, as the
+      # licence requires; other ArtCraft text is listed as a warning.
+      # T-Word, T-PDF and T-Exel (`brand: warn`) still carry such text in
+      # their translation catalogs and only warn.
+      - name: Brand check
+        run: |
+          site="dist/${{ matrix.app }}"
+          echo "canvas: $(grep -oE '<canvas[^>]*id="[^"]+"' "$site/index.html" | head -1)"
+          echo "title:  $(grep -oE '<title>[^<]*' "$site/index.html" | head -1)"
+          bad='discord\.gg/artcraft|artcraft-(logo|mark)|Join the ArtCraft|ArtCraft (community|Discord|family|suite|website|Website)|Crafting Apps?'
+          if grep -rlaE "$bad" "$site"; then
+            grep -raoE ".{0,40}($bad).{0,40}" "$site" | head -20
+            if [[ "${{ matrix.brand }}" == warn ]]; then
+              echo "::warning::${{ matrix.app }}: ArtCraft brand text in the build (see the log)"
+            else
+              echo "::error::ArtCraft brand text in the build"; exit 1
+            fi
+          fi
+          if hits="$(grep -raohE '.{0,30}(ArtCraft|getartcraft)[ -~]{0,30}' "$site" | grep -v 'ArtCraft Team' | sort | uniq -c)" && [[ -n "$hits" ]]; then
+            echo "$hits"
+            echo "::warning::${{ matrix.app }}: other ArtCraft text in the build (see the log)"
           fi
 
       - name: Archive
@@ -126,5 +227,5 @@ jobs:
           cat *.sha256 > SHA256SUMS.txt
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --title "TitanOS-Office ${GITHUB_REF_NAME#v}" \
-            --notes "T-Word, T-PDF und T-Exel als Web-Fassung für TitanOS. Prüfsummen in SHA256SUMS.txt." \
+            --notes "Die Office- und Kreativprogramme von TitanOS als Web-Fassung. Prüfsummen in SHA256SUMS.txt." \
             *.zip SHA256SUMS.txt
