@@ -37,6 +37,7 @@ Die Originale stammen vom ArtCraft Team und stehen unter **MIT OR Apache-2.0**. 
   Zwei weitere Bausteine liegen direkt im Repo: T-Effect nutzt die FilmCraft-Codecs aus `t-effect/vendor/filmcraft/` (storytold/filmcraft d5ead4ba), T-Design den INDD-Leser aus `t-design/vendor/indd/` (storytold/indd-utils 7f3060e5), beide MIT OR Apache-2.0.
 
   Neuerungen der Originale übernehmen wir gezielt, nicht automatisch.
+- **Schriften:** T-Word und T-Exel bringen freie, maßgleiche Ersatzschriften für die üblichen Office-Schriften mit (Carlito ↔ Calibri, Caladea ↔ Cambria, Liberation ↔ Arial, Times New Roman, Courier New, alle OFL). Dokumente umbrechen dadurch wie in Word und Excel, auch in der Web-Fassung ohne Systemschriften. Neue T-Word-Dokumente beginnen in Carlito, weil es für Aptos keine freie Entsprechung gibt.
 - **Übersetzungen:** Die deutschen Kataloge liegen im Repo (`<programm>/i18n/`), übernommen aus [craft-i18n](https://github.com/storytold/craft-i18n) am Commit in `craft-i18n.rev`, mit den neuen Programmnamen. Beim Bauen wird nichts von storytold geladen.
 
 ## Bauen und Releases

@@ -27,6 +27,28 @@ pub(super) static BUNDLED: &[&[u8]] = &[
     include_bytes!("../../../../assets/fonts/Inter-Medium.ttf"),
     include_bytes!("../../../../assets/fonts/Inter-SemiBold.ttf"),
     include_bytes!("../../../../assets/fonts/JetBrainsMono-Regular.ttf"),
+    // TitanOS-Office: metric-compatible twins of the common Office fonts (OFL), so documents in
+    // Calibri, Cambria, Arial, Times New Roman and Courier New wrap and paginate as in Word.
+    include_bytes!("../../../../assets/fonts/Carlito-Regular.ttf"),
+    include_bytes!("../../../../assets/fonts/Carlito-Bold.ttf"),
+    include_bytes!("../../../../assets/fonts/Carlito-Italic.ttf"),
+    include_bytes!("../../../../assets/fonts/Carlito-BoldItalic.ttf"),
+    include_bytes!("../../../../assets/fonts/Caladea-Regular.ttf"),
+    include_bytes!("../../../../assets/fonts/Caladea-Bold.ttf"),
+    include_bytes!("../../../../assets/fonts/Caladea-Italic.ttf"),
+    include_bytes!("../../../../assets/fonts/Caladea-BoldItalic.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationSans-Regular.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationSans-Bold.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationSans-Italic.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationSans-BoldItalic.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationSerif-Regular.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationSerif-Bold.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationSerif-Italic.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationSerif-BoldItalic.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationMono-Regular.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationMono-Bold.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationMono-Italic.ttf"),
+    include_bytes!("../../../../assets/fonts/LiberationMono-BoldItalic.ttf"),
 ];
 
 #[derive(Clone)]

@@ -850,14 +850,14 @@ fn modify_style_font_box_finds_the_family() {
     let key = |key, modifiers| egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
     h.event(key(egui::Key::A, egui::Modifiers::COMMAND));
     h.step();
-    h.event(egui::Event::Text("aptos disp".into()));
+    h.event(egui::Event::Text("liberation se".into()));
     h.step();
     // Enter both picks the highlighted family and presses OK, as in the Font dialog.
     h.event(key(egui::Key::Enter, egui::Modifiers::NONE));
     h.run_steps(2);
     assert!(h.state().dialog.is_none(), "Enter pressed OK");
     let rc = h.state().session.doc.styles.resolve_char(Some("Normal"), &wordcraft_doc::CharProps::default());
-    assert_eq!(rc.font, wordcraft_doc::styles::HEADING_FONT);
+    assert_eq!(rc.font, "Liberation Serif");
 }
 
 /// A dialog was pinned by its anchor, so dragging its title bar did nothing (#732).

@@ -237,7 +237,7 @@ fn hovering_and_clicking_a_font_in_the_bars_list() {
         .min_by(|a, b| a.min.y.total_cmp(&b.min.y).then(a.min.x.total_cmp(&b.min.x)))
         .expect("the bar has a font box");
     click_at(&mut h, pos2(font_box.max.x + 8.0, font_box.center().y));
-    let family = h.state_mut().previews.families().into_iter().find(|f| f != "Aptos Display" && f != "Aptos").expect("another family is installed");
+    let family = h.state_mut().previews.families().into_iter().find(|f| f != wordcraft_doc::styles::BODY_FONT && f != wordcraft_doc::styles::HEADING_FONT).expect("another family is installed");
     let at = h.get_all_by_label(&family).map(|n| n.rect().center()).find(|p| p.y > font_box.max.y).expect("the list shows the family");
     h.event(egui::Event::PointerMoved(at));
     steps(&mut h);
@@ -264,7 +264,7 @@ fn a_picked_font_joins_the_recent_section_on_the_next_open() {
         .expect("the bar has a font box");
     let arrow = pos2(font_box.max.x + 8.0, font_box.center().y);
     click_at(&mut h, arrow);
-    let family = h.state_mut().previews.families().into_iter().find(|f| f != "Aptos Display" && f != "Aptos").expect("another family is installed");
+    let family = h.state_mut().previews.families().into_iter().find(|f| f != wordcraft_doc::styles::BODY_FONT && f != wordcraft_doc::styles::HEADING_FONT).expect("another family is installed");
     let at = h.get_all_by_label(&family).map(|n| n.rect().center()).find(|p| p.y > font_box.max.y).expect("the list shows the family");
     h.event(egui::Event::PointerMoved(at));
     h.event(egui::Event::PointerButton { pos: at, button: egui::PointerButton::Primary, pressed: true, modifiers: Default::default() });

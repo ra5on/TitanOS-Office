@@ -533,7 +533,7 @@ fn build_role_chain(
     let paths = candidates(role);
     let refs: Vec<(&str, u32)> = paths.iter().map(|(p, i)| (p.as_str(), *i)).collect();
     let mut chain: Vec<String> = Vec::new();
-    let loaded = if system { try_load(&refs) } else { None };
+    let loaded = if system { try_load(&refs).or_else(|| bundled_role(role)) } else { None };
     if let Some(mut fd) = loaded {
         // Helvetica Neue Bold's own TrueType hints close Cyrillic е into ө at 13 pt on a Retina
         // screen (#1184). Core Text never runs them, so this draws it the way macOS does.
@@ -569,6 +569,29 @@ fn build_role_chain(
     chain.extend(fallback.iter().cloned());
     chain.retain(|k| fonts.font_data.contains_key(k));
     chain
+}
+
+/// TitanOS-Office: the web build has no system fonts, so the cell roles use the bundled
+/// metric-compatible twins of the Office fonts (OFL): Carlito for Calibri (the default cell
+/// font), Liberation Serif for Times/Cambria, Liberation Mono for Courier. Native builds keep
+/// finding the installed fonts (these same twins on most Linux systems).
+#[cfg(target_arch = "wasm32")]
+fn bundled_role(role: &str) -> Option<FontData> {
+    let bytes: &'static [u8] = match role {
+        CELL => include_bytes!("../../../../assets/fonts/Carlito-Regular.ttf"),
+        CELL_BOLD => include_bytes!("../../../../assets/fonts/Carlito-Bold.ttf"),
+        CELL_ITALIC => include_bytes!("../../../../assets/fonts/Carlito-Italic.ttf"),
+        CELL_BOLD_ITALIC => include_bytes!("../../../../assets/fonts/Carlito-BoldItalic.ttf"),
+        SERIF => include_bytes!("../../../../assets/fonts/LiberationSerif-Regular.ttf"),
+        MONO => include_bytes!("../../../../assets/fonts/LiberationMono-Regular.ttf"),
+        _ => return None,
+    };
+    Some(FontData::from_static(bytes))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn bundled_role(_role: &str) -> Option<FontData> {
+    None
 }
 
 /// Inserts the loaded cell face before the script fallbacks of the interface families, so the
