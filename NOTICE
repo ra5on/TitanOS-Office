@@ -1,0 +1,14 @@
+TitanOS-Office
+
+T-Word, T-PDF and T-Exel are modified versions of WordCraft, PdfCraft and
+GridCraft by the ArtCraft Team and their contributors
+(https://github.com/storytold/wordcraft, .../pdfcraft, .../gridcraft),
+licensed MIT OR Apache-2.0. The original licence texts and notices are kept
+in each folder (LICENSE-MIT, LICENSE-APACHE, NOTICE, ATTRIBUTION*).
+
+Changes for TitanOS (2026, the TitanOS contributors):
+- the ArtCraft name, wordmark and logos are removed (docs/brand/ of the
+  originals, LicenseRef-Storyteller-Trademark: forks must remove them);
+- the programs carry the names T-Word, T-PDF and T-Exel;
+- the dependencies on storytold's forks of craft-libs, egui, winit and
+  winprint.rs point to copies under github.com/ra5on (same commits).

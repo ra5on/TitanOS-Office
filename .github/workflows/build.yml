@@ -1,0 +1,132 @@
+name: Build
+
+# Builds the web versions of T-Word, T-PDF and T-Exel. On a tag vX.Y.Z the
+# three archives (t-<app>-web-X.Y.Z.zip, laid out as TitanOS expects:
+# one folder t-<app>-web-X.Y.Z/ with index.html at its top) and their
+# SHA-256 go into a GitHub release.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  TRUNK_VERSION: '0.21.14'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  web:
+    name: ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: t-word
+            crate: wordcraft-web
+          - app: t-pdf
+            crate: pdfcraft-web
+          - app: t-exel
+            crate: gridcraft-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.0-dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rust with WebAssembly
+        run: |
+          rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown
+          rustup default stable
+          rustc --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ matrix.app }}
+          key: ${{ matrix.app }}
+
+      - name: Trunk
+        run: |
+          curl -fsSL "https://github.com/trunk-rs/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" | tar -xz -C /usr/local/bin trunk
+          trunk --version
+
+      # The translations (German among them) are an optional build input,
+      # pinned by the commit in craft-i18n.rev; without it the apps speak
+      # English only.
+      - name: Translations
+        run: |
+          if [[ -f "${{ matrix.app }}/craft-i18n.rev" ]]; then
+            rev=$(tr -d '[:space:]' < "${{ matrix.app }}/craft-i18n.rev")
+            git init -q "$RUNNER_TEMP/craft-i18n"
+            git -C "$RUNNER_TEMP/craft-i18n" fetch -q --depth 1 https://github.com/storytold/craft-i18n "$rev"
+            git -C "$RUNNER_TEMP/craft-i18n" checkout -q FETCH_HEAD
+            echo "CRAFT_I18N_DIR=$RUNNER_TEMP/craft-i18n" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build
+        run: |
+          site="$GITHUB_WORKSPACE/dist/${{ matrix.app }}"
+          cd "${{ matrix.app }}/apps/${{ matrix.crate }}"
+          trunk build --release --dist "$site" --public-url ./
+          test -f "$site/index.html"
+          if grep -Eq '(src|href)="/[^/]' "$site/index.html"; then
+            echo "::error::index.html has root-absolute URLs"; exit 1
+          fi
+
+      - name: Archive
+        run: |
+          name="${{ matrix.app }}-web-${{ steps.version.outputs.version }}"
+          mkdir -p "work/$name"
+          cp -R "dist/${{ matrix.app }}/." "work/$name/"
+          for f in LICENSE-MIT LICENSE-APACHE NOTICE ATTRIBUTION.md ATTRIBUTION.toml; do
+            [[ -f "${{ matrix.app }}/$f" ]] && cp "${{ matrix.app }}/$f" "work/$name/" || true
+          done
+          cp NOTICE "work/$name/NOTICE-TitanOS-Office"
+          (cd work && zip -qr9 "../$name.zip" "$name")
+          sha256sum "$name.zip" | tee "$name.zip.sha256"
+          ls -l "$name.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}
+          path: |
+            ${{ matrix.app }}-web-*.zip
+            ${{ matrix.app }}-web-*.zip.sha256
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: web
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd out
+          cat *.sha256 > SHA256SUMS.txt
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "TitanOS-Office ${GITHUB_REF_NAME#v}" \
+            --notes "T-Word, T-PDF und T-Exel als Web-Fassung für TitanOS. Prüfsummen in SHA256SUMS.txt." \
+            *.zip SHA256SUMS.txt
