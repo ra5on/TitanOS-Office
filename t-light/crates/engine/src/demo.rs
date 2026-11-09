@@ -27,7 +27,7 @@ pub fn load(s: &mut Session) {
             location: sc.meta.location.into(),
             title: sc.name.clone(),
             keywords: sc.meta.keywords.iter().map(|k| k.to_string()).collect(),
-            creator: "LightCraft Demo".into(),
+            creator: "T-Light Demo".into(),
             ..Default::default()
         };
         // one demo photo carries a camera focus point (as a Sony raw would), on the bloom's centre, so
