@@ -24,7 +24,7 @@ Die Originale stammen vom ArtCraft Team und stehen unter **MIT OR Apache-2.0**. 
   - [TitanOS-winprint](https://github.com/ra5on/TitanOS-winprint)
 
   Neuerungen der Originale übernehmen wir gezielt, nicht automatisch.
-- **Übersetzungen** (darunter Deutsch) kommen beim Bauen aus [craft-i18n](https://github.com/storytold/craft-i18n), fest auf den Commit in `craft-i18n.rev`.
+- **Übersetzungen:** Die deutschen Kataloge liegen im Repo (`<programm>/i18n/`), übernommen aus [craft-i18n](https://github.com/storytold/craft-i18n) am Commit in `craft-i18n.rev`, mit den neuen Programmnamen. Beim Bauen wird nichts von storytold geladen.
 
 ## Bauen und Releases
 

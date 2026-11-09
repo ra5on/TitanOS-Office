@@ -66,17 +66,15 @@ jobs:
           curl -fsSL "https://github.com/trunk-rs/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" | tar -xz -C /usr/local/bin trunk
           trunk --version
 
-      # The translations (German among them) are an optional build input,
-      # pinned by the commit in craft-i18n.rev; without it the apps speak
-      # English only.
+      # The translations (German) live in <app>/i18n: the catalogs of
+      # craft-i18n at the commit in craft-i18n.rev, with the app names
+      # replaced (see <app>/i18n/README.md). Nothing is fetched from
+      # storytold at build time. Without the folder the app is English only.
       - name: Translations
         run: |
-          if [[ -f "${{ matrix.app }}/craft-i18n.rev" ]]; then
-            rev=$(tr -d '[:space:]' < "${{ matrix.app }}/craft-i18n.rev")
-            git init -q "$RUNNER_TEMP/craft-i18n"
-            git -C "$RUNNER_TEMP/craft-i18n" fetch -q --depth 1 https://github.com/storytold/craft-i18n "$rev"
-            git -C "$RUNNER_TEMP/craft-i18n" checkout -q FETCH_HEAD
-            echo "CRAFT_I18N_DIR=$RUNNER_TEMP/craft-i18n" >> "$GITHUB_ENV"
+          if [[ -d "${{ matrix.app }}/i18n/locales" ]]; then
+            echo "CRAFT_I18N_DIR=$GITHUB_WORKSPACE/${{ matrix.app }}/i18n" >> "$GITHUB_ENV"
+            echo "CRAFT_I18N_REQUIRED=1" >> "$GITHUB_ENV"
           fi
 
       - name: Build
