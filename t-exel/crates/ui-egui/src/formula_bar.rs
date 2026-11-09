@@ -467,7 +467,7 @@ pub fn editor_widget(app: &mut SheetApp, ui: &mut egui::Ui, id: egui::Id, font: 
     // Keys the editor handles itself (before the TextEdit sees them), only where it has focus.
     let focused = ui.ctx().memory(|m| m.focused());
     let has_focus = focused == Some(id) || (mine && (ed.request_focus || focused.is_none()));
-    let EditorKeyOutcome { action, arrow, cancel, to_python } = editor_shortcuts(app, ui, id, &mut ed, mine, has_focus);
+    let EditorKeyOutcome { action, arrow, cancel, to_python, save } = editor_shortcuts(app, ui, id, &mut ed, mine, has_focus);
     // The text widget.
     let refs = formula_refs(&ed.text);
     let t = Tokens::get(ui.ctx());
@@ -599,7 +599,12 @@ pub fn editor_widget(app: &mut SheetApp, ui: &mut egui::Ui, id: egui::Id, font: 
         return EditorInfo { lines, caret };
     }
     app.editor = Some(ed);
-    if cancel {
+    if let Some(command) = save {
+        // As Enter would, without moving; a draft the workbook refuses stays open with the reason.
+        if app.commit_edit(0, 0, false, false) {
+            app.run_or_alert(command, json!({}));
+        }
+    } else if cancel {
         app.cancel_edit();
     } else if let Some((dr, dc, array, fill)) = action {
         if arrow {
@@ -619,6 +624,9 @@ struct EditorKeyOutcome {
     cancel: bool,
     /// Ctrl+Alt+Shift+P, or `=PY` then Tab: the edit turns into Python code.
     to_python: bool,
+    /// Ctrl+S / Ctrl+Shift+S while editing (TitanOS-Office): the draft goes in, the
+    /// selection stays on the cell, then the workbook is saved.
+    save: Option<&'static str>,
 }
 
 fn editor_shortcuts(
@@ -629,9 +637,21 @@ fn editor_shortcuts(
     mine: bool,
     has_focus: bool,
 ) -> EditorKeyOutcome {
-    let mut outcome = EditorKeyOutcome { action: None, arrow: false, cancel: false, to_python: false };
+    let mut outcome = EditorKeyOutcome { action: None, arrow: false, cancel: false, to_python: false, save: None };
     // A message or dialog owns Enter and Escape until it closes.
     if !has_focus || !mine || app.message.is_some() || app.dialog.is_some() {
+        return outcome;
+    }
+    outcome.save = ui.input_mut(|i| {
+        if i.consume_key(egui::Modifiers::COMMAND | egui::Modifiers::SHIFT, Key::S) {
+            Some("file.saveAs")
+        } else if i.consume_key(egui::Modifiers::COMMAND, Key::S) {
+            Some("file.save")
+        } else {
+            None
+        }
+    });
+    if outcome.save.is_some() {
         return outcome;
     }
     // Ctrl+Alt+Shift+P turns the edit into Python code.
