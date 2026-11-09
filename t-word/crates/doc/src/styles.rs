@@ -492,8 +492,10 @@ impl Default for StyleSheet {
 /// The default heading colour.
 pub const HEADING_BLUE: Rgb = Rgb(0x0F, 0x47, 0x61);
 /// Default body/heading fonts (theme minor/major). Substituted by layout when not installed.
-pub const BODY_FONT: &str = "Aptos";
-pub const HEADING_FONT: &str = "Aptos Display";
+/// TitanOS-Office: Carlito (bundled, metric-compatible with Calibri) instead of Aptos, which has
+/// no free twin, so a new document needs no font that isn't there.
+pub const BODY_FONT: &str = "Carlito";
+pub const HEADING_FONT: &str = "Carlito";
 
 fn chr() -> CharProps {
     CharProps::default()

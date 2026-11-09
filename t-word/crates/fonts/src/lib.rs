@@ -363,6 +363,28 @@ mod tests {
         }
     }
 
+    /// TitanOS-Office: the twins of the common Office fonts are bundled, so Calibri, Cambria,
+    /// Arial, Times New Roman and Courier New are drawn to their own widths (no "not installed").
+    #[test]
+    fn office_twins_are_bundled() {
+        let fams = FontDb::global().families();
+        for (office, twin) in [
+            ("Calibri", "Carlito"),
+            ("Cambria", "Caladea"),
+            ("Arial", "Liberation Sans"),
+            ("Times New Roman", "Liberation Serif"),
+            ("Courier New", "Liberation Mono"),
+        ] {
+            assert!(fams.iter().any(|f| f == twin), "{twin} bundled: {fams:?}");
+            for (bold, italic) in [(false, false), (true, false), (false, true), (true, true)] {
+                let r = crate::word::resolve(office, bold, italic);
+                assert!(crate::word::metric_compatible(office, &r.face.family), "{office} drawn in {}", r.face.family);
+                assert!(!r.synth_bold && !r.synth_italic, "{office} {bold}/{italic}: a real face");
+            }
+        }
+        assert!(fams.iter().any(|f| f == "Carlito"), "new documents use Carlito");
+    }
+
     #[test]
     fn shaping_produces_clusters_and_advances() {
         let face = FontDb::global().face(DEFAULT_FAMILY, "Regular");

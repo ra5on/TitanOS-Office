@@ -22,6 +22,16 @@ mod vertical;
 
 const WRAP_TEST_FONT: &str = "Source Sans 3";
 
+/// A document in a fixed bundled font (TitanOS-Office made Carlito the default): these tests
+/// look for a paragraph length that sets up their page break, which some font metrics never
+/// give (with Aptos drawn in Carlito, or Source Serif 4, the float lands a page early: a layout
+/// edge case of its own, noted in TitanOS PLAN 75-20).
+fn fixed_font_text(text: &str) -> Document {
+    let mut d = Document::from_text(text);
+    std::sync::Arc::make_mut(&mut d.styles).default_chr.font = Some("Liberation Sans".into());
+    d
+}
+
 fn lay(doc: &Document) -> DocLayout {
     let mut c = LayoutCache::new();
     layout(doc, &mut c, &LayoutOptions::default())
@@ -6245,7 +6255,7 @@ fn a_float_whose_anchor_comes_back_to_page_one_stays_there_with_the_text_around_
 /// back to page two; the note goes with it, once, not left on page one as well.
 #[test]
 fn a_footnote_pushed_on_by_a_float_coming_back_is_on_its_reference_s_page_only() {
-    let mut d = Document::from_text(&"The quick brown fox jumps over the lazy dog. ".repeat(400));
+    let mut d = fixed_font_text(&"The quick brown fox jumps over the lazy dog. ".repeat(400));
     let note = |text: &str| {
         let mut p = wordcraft_doc::Paragraph::with_text(text, Default::default()).styled("FootnoteText");
         p.props.space_after = Some(0.0);
@@ -6295,7 +6305,7 @@ fn of_two_floats_held_back_only_the_one_whose_anchor_comes_back_stays_on_page_on
 /// a float anchored on the first line it pushes on to page three is drawn on page three.
 #[test]
 fn a_float_anchored_on_a_line_a_footnote_pushes_on_is_drawn_on_the_next_page() {
-    let mut d = Document::from_text(&"The quick brown fox jumps over the lazy dog. ".repeat(600));
+    let mut d = fixed_font_text(&"The quick brown fox jumps over the lazy dog. ".repeat(600));
     let mut note = wordcraft_doc::Paragraph::with_text(&"The note text runs on for a while. ".repeat(30), Default::default()).styled("FootnoteText");
     note.props.space_after = Some(0.0);
     let id = d.add_part(wordcraft_doc::PartKind::Footnote, vec![wordcraft_doc::para_block(note)]);
@@ -6321,7 +6331,7 @@ fn a_float_anchored_on_a_line_a_footnote_pushes_on_is_drawn_on_the_next_page() {
 fn a_float_anchored_on_a_line_widow_control_takes_on_is_drawn_on_the_next_page() {
     // A paragraph of three pages whose last two lines are on the third only by widow control.
     let (mut d, l) = (150..300)
-        .map(|k| Document::from_text(&"The quick brown fox jumps over the lazy dog. ".repeat(k)))
+        .map(|k| fixed_font_text(&"The quick brown fox jumps over the lazy dog. ".repeat(k)))
         .map(|d| {
             let l = lay(&d);
             (d, l)

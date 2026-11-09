@@ -24,3 +24,12 @@ Vendored third-party code (unchanged, MIT OR Apache-2.0):
 - t-design/vendor/indd: indd-utils, from https://github.com/storytold/indd-utils
   at 7f3060e5bce78d21ea70e0d5eacb96edce15dfbe (aiongg and the indd-utils
   contributors).
+
+Bundled fonts added for TitanOS (SIL Open Font License 1.1, licence texts
+next to the files in <app>/assets/fonts/):
+- Carlito (metric-compatible with Calibri) and Caladea (with Cambria), from
+  https://github.com/google/fonts (ofl/carlito, ofl/caladea);
+- Liberation Sans, Serif and Mono 2.1.5 (with Arial, Times New Roman and
+  Courier New), from https://github.com/liberationfonts/liberation-fonts.
+In t-word (all twenty faces; new documents use Carlito) and t-exel (Carlito,
+Liberation Serif and Mono, for the cells of the web version).

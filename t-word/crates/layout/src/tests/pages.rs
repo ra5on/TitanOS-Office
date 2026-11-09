@@ -583,6 +583,8 @@ fn a_page_ends_when_a_multiple_spaced_lines_text_no_longer_fits() {
         let mut past_margin = 0;
         for shift in (0..28).step_by(2) {
             let mut d = Document::from_text(&"Several words wrap onto many lines of a long paragraph. ".repeat(60));
+            // Measured with the font of the time (Aptos, drawn with a substitute), not Carlito.
+            std::sync::Arc::make_mut(&mut d.styles).default_chr.font = Some("Source Sans 3".into());
             if let Some(wordcraft_doc::Block::Para(p)) = d.body.get_mut(0).map(Arc::make_mut) {
                 p.props.line_spacing = Some(LineSpacing::Multiple(multiple));
                 p.props.space_before = Some(shift as f32);
