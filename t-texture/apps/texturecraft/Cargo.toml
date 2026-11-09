@@ -1,0 +1,35 @@
+[package]
+name = "texturecraft"
+description = "TextureCraft: an open-source 3D texture painter (desktop app)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+default-run = "texturecraft"
+build = "build.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+texturecraft-engine = { workspace = true }
+texturecraft-ui-egui = { workspace = true }
+# The control channel's token, framing and connection limits (shared with `texturecraft-cli serve`).
+texturecraft-automation = { workspace = true }
+eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit", "wayland", "x11", "persistence"] }
+egui = { workspace = true }
+image = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+# The message box for errors that end the app (a Windows release build has no console).
+rfd = { workspace = true }
+# Reads the saved System title bar setting before the window opens (eframe's settings format).
+ron = "0.12"
+
+# The window's big (taskbar) icon, and the guard that keeps the app-drawn title bar's window
+# borderless (src/window_frame.rs; winsafe is MIT, User32 only).
+[target.'cfg(windows)'.dependencies]
+winit = { version = "0.30", default-features = false }
+winsafe = { version = "0.0.29", default-features = false, features = ["user"] }
+
+[build-dependencies]
+winresource = "0.1"
