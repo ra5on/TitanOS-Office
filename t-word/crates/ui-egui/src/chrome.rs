@@ -381,7 +381,7 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
                             ui.painter().text(
                                 pos2(crate::rtl::lead_x(rtl, r, 24.0), r.center().y),
                                 crate::rtl::lead_center(rtl),
-                                tl!("Discord"),
+                                tl!("GitHub"),
                                 medium(11.5),
                                 t.on_accent,
                             );
