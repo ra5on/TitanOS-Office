@@ -1749,7 +1749,8 @@ fn export_destination_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Token
             &mut opts.destination_mode,
         );
     }
-    if opts.destination_mode == D::SpecificFolder {
+    // No folder in the browser: the host asks where each file goes.
+    if opts.destination_mode == D::SpecificFolder && !cfg!(target_arch = "wasm32") {
         field(ui, "Folder", |ui| {
             trailing_button_row(ui, |ui| {
                 if app.services.pick_folder.is_some()
