@@ -808,7 +808,10 @@ pub(crate) fn paint_widget_focus(painter: &egui::Painter, response: &egui::Respo
 
 /// Placeholder body for panels that are not implemented yet.
 pub fn placeholder(ui: &mut egui::Ui, rect: Rect, t: &Tokens, text: &str) {
-    ui.painter().text(rect.center(), Align2::CENTER_CENTER, text, Tokens::ui(12.0), t.text_faint);
+    // Wrapped to the panel: a hint longer than a narrow panel ran out of it on both sides, cut off.
+    // A hint that fits on one line sits where it did.
+    let galley = ui.painter().layout(text.to_string(), Tokens::ui(12.0), t.text_faint, (rect.width() - 16.0).max(40.0));
+    ui.painter().galley(rect.center() - galley.size() / 2.0, galley, t.text_faint);
 }
 
 #[cfg(test)]
