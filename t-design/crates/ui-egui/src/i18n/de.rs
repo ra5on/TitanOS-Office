@@ -2148,4 +2148,10 @@ pub(super) const TABLE: &[(&str, &str)] = &[
     ("Stop Preview", "Vorschau beenden"),
     ("Update Data Source", "Datenquelle aktualisieren"),
     ("Validate from Root Element", "Ab Stammelement prüfen"),
+    ("TitanOS-Office on GitHub", "TitanOS-Office auf GitHub"),
+    ("Part of TitanOS: a modified version of DesignCraft (MIT OR Apache-2.0).", "Teil von TitanOS: eine geänderte Fassung von DesignCraft (MIT OR Apache-2.0)."),
+    ("Original: DesignCraft", "Original: DesignCraft"),
+    ("Report an issue", "Problem melden"),
+    ("T-Design is part of TitanOS", "T-Design gehört zu TitanOS"),
+    ("A modified version of DesignCraft (MIT OR Apache-2.0).", "Eine geänderte Fassung von DesignCraft (MIT OR Apache-2.0)."),
 ];

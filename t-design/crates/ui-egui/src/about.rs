@@ -153,12 +153,12 @@ pub fn show(app: &mut DesignApp, ctx: &egui::Context) {
             ));
             ui.label(crate::rtl::widget(
                 ui,
-                egui::RichText::new("Part of TitanOS: a modified version of DesignCraft (MIT OR Apache-2.0).")
+                egui::RichText::new(crate::i18n::tr(&app.ui.language, "Part of TitanOS: a modified version of DesignCraft (MIT OR Apache-2.0)."))
                     .size(12.0)
                     .color(t.text_dim),
             ));
             ui.add_space(16.0);
-            if discord_button(ui, "TitanOS-Office on GitHub", vec2(300.0, 40.0)) {
+            if discord_button(ui, crate::i18n::tr(&app.ui.language, "TitanOS-Office on GitHub"), vec2(300.0, 40.0)) {
                 open = Some("discord");
             }
             ui.add_space(4.0);

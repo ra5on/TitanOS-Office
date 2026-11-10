@@ -73,6 +73,9 @@ pub fn start() {
                     }
                     let inbox: Inbox = Inbox::default();
                     let mut app = DesignApp::new(Session::new(), services(inbox.clone(), cc.egui_ctx.clone()));
+                    // The interface follows the browser's language (German in a German browser);
+                    // Preferences › General › Interface Language still changes it.
+                    app.ui.language = browser_language().to_string();
                     if has_query_flag(&query(), "sample") {
                         let _ = app.run("file.newSample", serde_json::json!({}));
                     }
@@ -333,6 +336,30 @@ fn add_document_recovery_controls(snapshots: Vec<RecoveryDocument>) -> Result<bo
     // The inserted element's id also prevents duplicate buttons on repeated loss notifications.
     actions.insert_before(&documents, actions.first_child().as_ref())?;
     Ok(true)
+}
+
+/// The interface language the browser asks for: the first of `?lang=` and the browser's preferred
+/// languages (`navigator.languages`, most preferred first) that has a catalog, English otherwise.
+/// A language tag that is English stops the search: someone who prefers English, then German,
+/// gets English.
+fn browser_language() -> &'static str {
+    let query = query();
+    let asked = form_urlencoded::parse(query.strip_prefix('?').unwrap_or(&query).as_bytes()).find(|(key, _)| key == "lang").map(|(_, value)| value.into_owned());
+    let get = |object: &wasm_bindgen::JsValue, key: &str| js_sys::Reflect::get(object, &wasm_bindgen::JsValue::from_str(key)).unwrap_or(wasm_bindgen::JsValue::UNDEFINED);
+    let navigator = web_sys::window().map(|w| get(w.as_ref(), "navigator")).unwrap_or(wasm_bindgen::JsValue::UNDEFINED);
+    let listed = get(&navigator, "languages");
+    let mut tags: Vec<String> = asked.into_iter().collect();
+    if js_sys::Array::is_array(&listed) {
+        tags.extend(js_sys::Array::from(&listed).iter().filter_map(|v| v.as_string()));
+    }
+    tags.extend(get(&navigator, "language").as_string());
+    for tag in &tags {
+        let code = designcraft_ui_egui::i18n::language_for_locale(tag);
+        if !code.is_empty() || tag.to_ascii_lowercase().starts_with("en") {
+            return code;
+        }
+    }
+    ""
 }
 
 fn query() -> String {
