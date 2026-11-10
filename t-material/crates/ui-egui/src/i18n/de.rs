@@ -338,7 +338,7 @@ pub const TABLE: &[(&str, &str)] = &[
     ("Sample Color", "Farbe abtasten"),
     ("Sample Gray", "Grauwert abtasten"),
     ("Samplers", "Abtaster"),
-    ("Samples", "Abtastwerte"),
+    ("Samples", "Beispiele"),
     ("Save", "Speichern"),
     ("Save (Ctrl+S)", "Speichern (Strg+S)"),
     ("Save as...", "Speichern unter..."),
@@ -436,4 +436,10 @@ pub const TABLE: &[(&str, &str)] = &[
     ("Woven fabric", "Gewebter Stoff"),
     ("Your changes will be lost if you don't save them.", "Ohne Speichern gehen die Änderungen verloren."),
     ("Zoom the graph and the views", "Graph und Ansichten zoomen"),
+    // Labels that reach `tr` through a variable (graph and node properties).
+    ("Author", "Autor"),
+    ("Category", "Kategorie"),
+    ("Height", "Höhe"),
+    ("Tags", "Schlagwörter"),
+    ("Width", "Breite"),
 ];
