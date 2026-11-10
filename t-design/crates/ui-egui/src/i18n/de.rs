@@ -2154,4 +2154,14 @@ pub(super) const TABLE: &[(&str, &str)] = &[
     ("Report an issue", "Problem melden"),
     ("T-Design is part of TitanOS", "T-Design gehört zu TitanOS"),
     ("A modified version of DesignCraft (MIT OR Apache-2.0).", "Eine geänderte Fassung von DesignCraft (MIT OR Apache-2.0)."),
+    // Help menu and About window: the links of TitanOS-Office and the texts of the web build.
+    ("TitanOS-Office on GitHub…", "TitanOS-Office auf GitHub …"),
+    ("Original: DesignCraft on GitHub…", "Original: DesignCraft auf GitHub …"),
+    ("TitanOS on GitHub…", "TitanOS auf GitHub …"),
+    ("Check for Updates…", "Nach Updates suchen …"),
+    ("T-Design Updates", "T-Design-Updates"),
+    ("Update check is not supported in the web browser.", "Im Browser gibt es keine Update-Suche: TitanOS liefert das Programm aus."),
+    ("About", "Info"),
+    ("Contributors", "Mitwirkende"),
+    ("Models", "Modelle"),
 ];
