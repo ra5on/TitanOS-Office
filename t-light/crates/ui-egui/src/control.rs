@@ -549,6 +549,12 @@ pub const NO_EXPORT_FOLDER: &str = "Choose an export folder first.";
 /// Default export folder: `~/Pictures/LightCraft Exports` (`%USERPROFILE%\Pictures\T-Light Exports`
 /// on Windows, where `HOME` usually isn't set). Empty when no home folder is known.
 pub fn default_export_dir() -> String {
+    // In the browser there is no home folder and no folder to write into: the host (TitanOS) asks
+    // where each exported file goes. The export still needs a non-empty name here, or it is refused
+    // with "Choose an export folder first." and the Export button seems to do nothing.
+    if cfg!(target_arch = "wasm32") {
+        return "T-Light Exports".to_string();
+    }
     let home = if cfg!(windows) { std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) } else { std::env::var_os("HOME") };
     home.filter(|h| !h.is_empty())
         .map(|h| std::path::PathBuf::from(h).join("Pictures").join("T-Light Exports").to_string_lossy().into_owned())
@@ -598,6 +604,9 @@ pub fn export_active(app: &mut LightcraftApp, p: &Value) -> Result<Value, String
             last_dir.map(str::to_string).unwrap_or_else(default_export_dir)
         }
     };
+    // The browser build has no folder field (see dialogs.rs): a blank one left over from an earlier
+    // version's settings counts as the default.
+    let dir = if dir.is_empty() && cfg!(target_arch = "wasm32") { default_export_dir() } else { dir };
     let own_folders = opts.destination_mode == lightcraft_engine::export::DestinationMode::SameAsOriginal;
     if dir.is_empty() && exact.is_none() && !own_folders {
         return Err(NO_EXPORT_FOLDER.into());
