@@ -13,6 +13,18 @@ use wasm_bindgen::JsCast as _;
 const CANVAS_ID: &str = "soundcraft_canvas";
 const LOADING_ID: &str = "soundcraft_loading";
 
+/// The language the page asks for: `?lang=` in the address, else the browser's most preferred
+/// language (`navigator.languages`, then `navigator.language`); empty when there is none.
+fn browser_language() -> String {
+    let query = query();
+    let asked = query.trim_start_matches('?').split('&').find_map(|pair| pair.strip_prefix("lang=")).map(str::to_string);
+    let get = |object: &wasm_bindgen::JsValue, key: &str| js_sys::Reflect::get(object, &wasm_bindgen::JsValue::from_str(key)).unwrap_or(wasm_bindgen::JsValue::UNDEFINED);
+    let navigator = web_sys::window().map(|w| get(w.as_ref(), "navigator")).unwrap_or(wasm_bindgen::JsValue::UNDEFINED);
+    let listed = get(&navigator, "languages");
+    let first = if js_sys::Array::is_array(&listed) { js_sys::Array::from(&listed).get(0).as_string() } else { None };
+    asked.or(first).or_else(|| get(&navigator, "language").as_string()).unwrap_or_default()
+}
+
 pub fn start() {
     eframe::WebLogger::init(log::LevelFilter::Info).ok();
     io::set_deliver(download);
@@ -25,6 +37,8 @@ pub fn start() {
             log::error!("missing <canvas id=\"{CANVAS_ID}\">");
             return;
         };
+        // The interface follows the browser's language (German or English).
+        soundcraft_ui_egui::i18n::set_language(&browser_language());
         let mut options = eframe::WebOptions::default();
         if query().contains("webgl")
             && let eframe::egui_wgpu::WgpuSetup::CreateNew(create) = &mut options.wgpu_options.wgpu_setup
