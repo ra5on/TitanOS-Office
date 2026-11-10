@@ -14,6 +14,17 @@ use effectcraft_engine::menus::{MenuEntry, MenuNode};
 pub(crate) use ui::catalog_characters;
 pub(crate) use ui::{set_current, tr, tr_args};
 
+/// A sentence the app's shell shows outside the egui interface (the browser build's own prompts),
+/// in the language the panels draw in; the English `source` when there is no row.
+pub fn text(source: &str) -> String {
+    tr(source).to_string()
+}
+
+/// [`text`] for a sentence that carries values: each `{}` takes the next argument.
+pub fn text_args(source: &str, args: &[&dyn std::fmt::Display]) -> String {
+    tr_args(source, args)
+}
+
 /// Every language with a catalog, in the order Settings ▸ General ▸ Language lists them.
 const CATALOG_CODES: [&str; 13] = ["cs", "de", "es", "fr", "pl", "pt-br", "sv", "ru", "uk", "ka", "ja", "zh-hans", "zh-hant"];
 

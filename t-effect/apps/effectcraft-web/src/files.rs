@@ -128,7 +128,11 @@ impl Services for WebServices {
         if quiet || crate::is_worker() {
             return Ok(());
         }
-        download(file_name(path), data).map_err(|e| std::io::Error::other(format!("download failed: {e:?}")))
+        download(file_name(path), data).map_err(|e| std::io::Error::other(format!("download failed: {e:?}")))?;
+        // In a TitanOS window the download opens its save dialog: the window's answer decides
+        // whether a project counts as saved (`crate::titanos`).
+        crate::titanos::handed(Some(path));
+        Ok(())
     }
     fn store_file(&self, path: &str, data: &[u8]) -> std::io::Result<()> {
         put(path, data.into());
@@ -203,8 +207,9 @@ pub fn flush_downloads() {
             download(&format!("{stem}.zip"), &zip_store(&out))
         }
     };
-    if let Err(e) = r {
-        log::warn!("download failed: {e:?}");
+    match r {
+        Ok(()) => crate::titanos::handed(None),
+        Err(e) => log::warn!("download failed: {e:?}"),
     }
 }
 
