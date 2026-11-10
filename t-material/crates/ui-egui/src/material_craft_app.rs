@@ -47,7 +47,10 @@ pub struct MaterialCraftApp {
 
 impl MaterialCraftApp {
     pub fn new(cc: &eframe::CreationContext<'_>, session: Session) -> MaterialCraftApp {
-        let ui = cc.storage.and_then(|s| eframe::get_value::<UiState>(s, "ui")).unwrap_or_default();
+        let mut ui = cc.storage.and_then(|s| eframe::get_value::<UiState>(s, "ui")).unwrap_or_default();
+        if !ui.prefs.language_chosen {
+            ui.prefs.language = i18n::os_language().into();
+        }
         theme::install(&cc.egui_ctx);
         let mut app = MaterialCraftApp::headless(session, ui);
         i18n::set_language(&app.ui.prefs.language);
