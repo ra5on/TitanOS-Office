@@ -399,7 +399,7 @@ fn about_main(app: &mut EffectcraftApp, ui: &mut egui::Ui, t: &Tokens, cmd: &mut
     p.text(
         r.min + vec2(90.0, 62.0),
         Align2::LEFT_CENTER,
-        format!("Version {}  •  Motion graphics & VFX in pure Rust", env!("CARGO_PKG_VERSION")),
+        format!("Version {}  •  Motion graphics & VFX in pure Rust", option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))),
         Tokens::ui(12.0),
         t.text_dim,
     );

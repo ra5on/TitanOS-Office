@@ -38,7 +38,10 @@ pub mod sampled_color;
 pub mod updates_ui;
 pub mod variables_panel;
 
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const VERSION: &str = match option_env!("TITANOS_OFFICE_VERSION") {
+    Some(version) => version,
+    None => env!("CARGO_PKG_VERSION"),
+};
 
 /// Where a report goes.
 const ISSUES: &str = "https://github.com/storytold/figcraft/issues";

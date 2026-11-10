@@ -147,7 +147,11 @@ jobs:
             echo "CRAFT_I18N_REQUIRED=1" >> "$GITHUB_ENV"
           fi
 
+      # TITANOS_OFFICE_VERSION: the release the build belongs to, shown in each
+      # program's About in place of the crate version of its original.
       - name: Build
+        env:
+          TITANOS_OFFICE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           site="$GITHUB_WORKSPACE/dist/${{ matrix.app }}"
           if [[ "${{ matrix.kind }}" == xtask ]]; then

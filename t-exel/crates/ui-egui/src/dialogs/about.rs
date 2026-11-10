@@ -16,7 +16,7 @@ pub(super) fn about(ui: &mut egui::Ui, d: &mut Dialog) {
         "Models" => crate::credits::models_ui(ui),
         _ => {
             ui.heading("T-Exel");
-            ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
+            ui.label(format!("Version {}", option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))));
             ui.add_space(4.0);
             ui.label("The spreadsheet of TitanOS, a modified version of GridCraft (MIT OR Apache-2.0).");
             ui.hyperlink_to("Source code: github.com/ra5on/TitanOS-Office", "https://github.com/ra5on/TitanOS-Office");

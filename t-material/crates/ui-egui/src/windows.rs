@@ -301,7 +301,7 @@ fn about(app: &mut MaterialCraftApp, ctx: &egui::Context) {
         let tk = Tokens::get(ui.ctx());
         ui.vertical_centered(|ui| {
             ui.label(RichText::new("T-Material").size(22.0).strong().color(tk.accent));
-            ui.label(format!("{} {}", tr("Version"), materialcraft_engine::VERSION));
+            ui.label(format!("{} {}", tr("Version"), SHOWN_VERSION));
             ui.add_space(6.0);
             ui.label(tr("Node-based procedural materials, built in pure Rust."));
             ui.label("Part of TitanOS: a modified version of MaterialCraft (MIT OR Apache-2.0).");
@@ -606,3 +606,10 @@ pub(crate) fn open_path_now(app: &mut MaterialCraftApp, path: &str) {
 #[cfg(all(test, not(target_arch = "wasm32")))]
 #[path = "windows.test.rs"]
 mod tests;
+
+/// The version About shows: the TitanOS-Office release the build belongs to (set by its CI), else
+/// the crate version of the original this program is based on.
+const SHOWN_VERSION: &str = match option_env!("TITANOS_OFFICE_VERSION") {
+    Some(version) => version,
+    None => materialcraft_engine::VERSION,
+};

@@ -1146,7 +1146,7 @@ fn about_dialog(ui: &mut Ui, d: &mut Dialog) -> bool {
         _ => {
             ui.label(egui::RichText::new(tl!("T-Word")).font(semibold(22.0)));
             let build = option_env!("WORDCRAFT_BUILD_SHA").map(|s| s.get(..8).unwrap_or(s)).unwrap_or(tl!("development build"));
-            ui.label(crate::i18n::fmt(tl!("Version {version} ({build})"), &[("version", env!("CARGO_PKG_VERSION")), ("build", build)]));
+            ui.label(crate::i18n::fmt(tl!("Version {version} ({build})"), &[("version", option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))), ("build", build)]));
             ui.label(tl!("The word processor of TitanOS, a modified version of WordCraft (MIT OR Apache-2.0)."));
             ui.add_space(6.0);
             ui.hyperlink_to(tl!("Source code: github.com/ra5on/TitanOS-Office"), "https://github.com/ra5on/TitanOS-Office");
