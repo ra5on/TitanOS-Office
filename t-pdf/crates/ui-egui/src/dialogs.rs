@@ -1574,7 +1574,7 @@ fn dialog_about(ui: &mut egui::Ui, req: &mut Pending) -> bool {
                 widgets::artcraft_mark(ui, 40.0);
                 ui.vertical(|ui| {
                     ui.label(egui::RichText::new("T-PDF").font(theme::semibold(20.0)));
-                    ui.label(crate::i18n::fmt(tl!("Version {v}"), &[("v", &pdfcraft_engine::build_info::version())]));
+                    ui.label(crate::i18n::fmt(tl!("Version {v}"), &[("v", &option_env!("TITANOS_OFFICE_VERSION").map_or_else(pdfcraft_engine::build_info::version, str::to_owned))]));
                 });
             });
             ui.add_space(6.0);

@@ -52,6 +52,16 @@ pub fn picker_languages() -> Vec<(&'static str, &'static str)> {
     std::iter::once(LANGUAGES[0]).chain(rest).collect()
 }
 
+/// The interface language for a BCP 47 locale such as `de-AT`, `pt-BR` or `zh-Hans-CN`: the code
+/// of the catalog in [`LANGUAGES`] that serves it, `""` (English) when there is none.
+pub fn language_for_locale(locale: &str) -> &'static str {
+    let lower = locale.trim().to_ascii_lowercase().replace('_', "-");
+    let primary = lower.split(['-', '.', '@']).next().unwrap_or("");
+    // The only Portuguese catalog is Brazil's.
+    let code = if primary == "pt" { "pt-br" } else { primary };
+    LANGUAGES.iter().map(|(c, _)| *c).find(|c| !c.is_empty() && *c == code).unwrap_or("")
+}
+
 /// Interface direction; independent of document binding and paragraph direction.
 pub fn is_rtl(lang: &str) -> bool {
     lang == "ar"

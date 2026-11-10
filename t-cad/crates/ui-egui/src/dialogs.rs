@@ -344,7 +344,7 @@ fn about(ctx: &egui::Context, open: &mut bool) {
                 2 => crate::credits::models_ui(ui),
                 _ => {
                     ui.heading(crate::tl!("T-CAD"));
-                    ui.label(crate::tf!("Version {version}", version = env!("CARGO_PKG_VERSION")));
+                    ui.label(crate::tf!("Version {version}", version = option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))));
                     ui.label(crate::tl!("Computer-aided design and drafting: an open-source, clean-room CAD application written in pure Rust."));
                     ui.add_space(6.0);
                     ui.label(RichText::new("Part of TitanOS: a modified version of CADCraft (MIT OR Apache-2.0).").color(t.text_dim));

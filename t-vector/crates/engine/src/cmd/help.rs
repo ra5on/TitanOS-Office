@@ -27,7 +27,7 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(query "help.discord", "TitanOS-Office on GitHub", ["Help"], None, "{} → {url} TitanOS-Office", always, |_, _| url(DISCORD_URL.into())),
         cmd!(query "help.website", "TitanOS on GitHub", ["Help"], None, "{} → {url}", always, |_, _| url(WEBSITE_URL.into())),
         cmd!(query "help.appPage", "Original: VectorCraft on GitHub", ["Help"], None, "{} → {url} the original project", always, |_, _| url(app_page_url())),
-        cmd!(query "help.github", "VectorCraft on GitHub", ["Help"], None, "{} → {url} source code, issues and releases", always, |_, _| url(github_url())),
+        cmd!(query "help.github", "T-Vector on GitHub", ["Help"], None, "{} → {url} source code, issues and releases", always, |_, _| url(github_url())),
         cmd!(query "help.links", "Links", [], None, "{} → {discord, website, appPage, github}", always, |_, _| {
             Ok(json!({ "discord": DISCORD_URL, "website": WEBSITE_URL, "appPage": app_page_url(), "github": github_url() }))
         }),

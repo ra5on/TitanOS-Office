@@ -348,11 +348,11 @@ const fn reader(id: &'static str, label: &'static str, extensions: &'static [&'s
     Format { id, label, extensions, mime, read: true, write: false, raster, options: &[] }
 }
 
-/// Every format VectorCraft reads or writes. Append-only: new formats go at the end.
+/// Every format T-Vector reads or writes. Append-only: new formats go at the end.
 pub const FORMATS: &[Format] = &[
     Format {
         id: "vectorcraft",
-        label: "VectorCraft",
+        label: "T-Vector",
         extensions: &[vectorcraft_format::EXTENSION, vectorcraft_format::LEGACY_EXTENSION],
         mime: "application/json",
         read: true,
@@ -456,7 +456,7 @@ pub const FORMATS: &[Format] = &[
     Format { id: "bmp", label: "BMP", extensions: &["bmp"], mime: "image/bmp", read: true, write: true, raster: true, options: BMP_OPTIONS },
     Format {
         id: "template",
-        label: "VectorCraft Template",
+        label: "T-Vector Template",
         extensions: &["vctemplate"],
         mime: "application/json",
         read: true,

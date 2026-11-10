@@ -66,7 +66,7 @@ pub(crate) fn check(app: &mut VectorcraftApp) -> Result<Value, String> {
     #[cfg(target_arch = "wasm32")]
     {
         app.updates_rt.manual_window_open = true;
-        app.updates_rt.status_message = Some("Update check is not supported in the web browser.".into());
+        app.updates_rt.status_message = Some(tl!("Update check is not supported in the web browser.").to_string());
         Ok(Value::Null)
     }
 }

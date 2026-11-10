@@ -363,6 +363,26 @@ impl WebShell {
     }
 }
 
+thread_local! {
+    /// The title last written to the page, so it is written only when it changes.
+    static PAGE_TITLE: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+}
+
+/// Keep the page's title on the document. eframe's web runner does not set it, and a page that
+/// frames the app (TitanOS) reads the `*` in it as "has unsaved changes": without the title it
+/// can only guess from typing and dragging, and asks before closing when nothing changed.
+fn sync_page_title(title: String) {
+    PAGE_TITLE.with(|last| {
+        let mut last = last.borrow_mut();
+        if *last != title {
+            if let Some(document) = web_sys::window().and_then(|w| w.document()) {
+                document.set_title(&title);
+            }
+            *last = title;
+        }
+    });
+}
+
 impl eframe::App for WebShell {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if let Some(why) = self.loss.take() {
@@ -370,6 +390,10 @@ impl eframe::App for WebShell {
         }
         let Some(app) = &mut self.app else { return };
         app.tick(ctx);
+        // The active document's name, with the `*` of unsaved changes when any open document has some.
+        let unsaved = app.session.documents().iter().any(|d| d.is_dirty());
+        let title = vectorcraft_ui_egui::chrome::window_title(app);
+        sync_page_title(if unsaved && !title.starts_with('*') { format!("*{title}") } else { title });
         crate::api::poll_replies();
         app.finish_ime_logic(ctx);
     }

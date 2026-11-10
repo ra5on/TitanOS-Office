@@ -58,6 +58,8 @@ pub fn start() {
                     if let Some(bridge) = &app_bridge {
                         bridge.connect(&mut services, cc.egui_ctx.clone());
                     }
+                    // The interface follows the browser's language (German or English).
+                    deckcraft_ui_egui::i18n::set_language(&browser_language());
                     let mut app = SlideApp::new(Session::new(), services);
                     // In host mode the parent sends the presentation to edit; no sample meanwhile.
                     if app_bridge.is_some() {
@@ -97,6 +99,16 @@ pub fn start() {
             }
         }
     });
+}
+
+/// The language the page asks for: `?lang=` in the address, else the browser's most preferred
+/// language (`navigator.languages`, then `navigator.language`); empty when there is none.
+fn browser_language() -> String {
+    let get = |object: &wasm_bindgen::JsValue, key: &str| js_sys::Reflect::get(object, &wasm_bindgen::JsValue::from_str(key)).unwrap_or(wasm_bindgen::JsValue::UNDEFINED);
+    let navigator = web_sys::window().map(|w| get(w.as_ref(), "navigator")).unwrap_or(wasm_bindgen::JsValue::UNDEFINED);
+    let listed = get(&navigator, "languages");
+    let first = if js_sys::Array::is_array(&listed) { js_sys::Array::from(&listed).get(0).as_string() } else { None };
+    query_param("lang").or(first).or_else(|| get(&navigator, "language").as_string()).unwrap_or_default()
 }
 
 fn query() -> String {

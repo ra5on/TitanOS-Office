@@ -433,7 +433,7 @@ impl Reader {
             self.group.dest = parent.dest;
             return;
         }
-        // An ignorable destination (`\*`): VectorCraft reads none of them.
+        // An ignorable destination (`\*`): T-Vector reads none of them.
         if starred {
             self.group.dest = Dest::Skip;
             return;

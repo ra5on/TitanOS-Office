@@ -73,6 +73,9 @@ pub fn start() {
                     }
                     let inbox: Inbox = Inbox::default();
                     let mut app = DesignApp::new(Session::new(), services(inbox.clone(), cc.egui_ctx.clone()));
+                    // The interface follows the browser's language (German in a German browser);
+                    // Preferences › General › Interface Language still changes it.
+                    app.ui.language = browser_language().to_string();
                     if has_query_flag(&query(), "sample") {
                         let _ = app.run("file.newSample", serde_json::json!({}));
                     }
@@ -335,6 +338,30 @@ fn add_document_recovery_controls(snapshots: Vec<RecoveryDocument>) -> Result<bo
     Ok(true)
 }
 
+/// The interface language the browser asks for: the first of `?lang=` and the browser's preferred
+/// languages (`navigator.languages`, most preferred first) that has a catalog, English otherwise.
+/// A language tag that is English stops the search: someone who prefers English, then German,
+/// gets English.
+fn browser_language() -> &'static str {
+    let query = query();
+    let asked = form_urlencoded::parse(query.strip_prefix('?').unwrap_or(&query).as_bytes()).find(|(key, _)| key == "lang").map(|(_, value)| value.into_owned());
+    let get = |object: &wasm_bindgen::JsValue, key: &str| js_sys::Reflect::get(object, &wasm_bindgen::JsValue::from_str(key)).unwrap_or(wasm_bindgen::JsValue::UNDEFINED);
+    let navigator = web_sys::window().map(|w| get(w.as_ref(), "navigator")).unwrap_or(wasm_bindgen::JsValue::UNDEFINED);
+    let listed = get(&navigator, "languages");
+    let mut tags: Vec<String> = asked.into_iter().collect();
+    if js_sys::Array::is_array(&listed) {
+        tags.extend(js_sys::Array::from(&listed).iter().filter_map(|v| v.as_string()));
+    }
+    tags.extend(get(&navigator, "language").as_string());
+    for tag in &tags {
+        let code = designcraft_ui_egui::i18n::language_for_locale(tag);
+        if !code.is_empty() || tag.to_ascii_lowercase().starts_with("en") {
+            return code;
+        }
+    }
+    ""
+}
+
 fn query() -> String {
     web_sys::window().and_then(|w| w.location().search().ok()).unwrap_or_default()
 }
@@ -347,10 +374,35 @@ struct WebShell {
     graphics: GraphicsState,
 }
 
+thread_local! {
+    /// The title last written to the page, so it is written only when it changes.
+    static PAGE_TITLE: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+}
+
+/// Keep the page's title on the document. eframe's web runner does not set it, and a page that
+/// frames the app (TitanOS) reads the `*` in it as "has unsaved changes": without the title it
+/// can only guess from typing and dragging, and asks before closing when nothing changed.
+fn sync_page_title(title: String) {
+    PAGE_TITLE.with(|last| {
+        let mut last = last.borrow_mut();
+        if *last != title {
+            if let Some(document) = web_sys::window().and_then(|w| w.document()) {
+                document.set_title(&title);
+            }
+            *last = title;
+        }
+    });
+}
+
 impl eframe::App for WebShell {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let graphics = self.graphics.clone();
         let _ = graphics.run_if_healthy(|| self.app.logic(ctx));
+        // The active document's name, with a `*` when any open document has unsaved changes.
+        let session = &self.app.session;
+        let unsaved = session.documents().iter().any(|d| d.is_dirty());
+        let name = session.active().map(|d| format!("{} \u{2014} ", d.title())).unwrap_or_default();
+        sync_page_title(format!("{}{name}T-Design", if unsaved { "*" } else { "" }));
     }
 
     fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {

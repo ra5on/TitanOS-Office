@@ -13,6 +13,18 @@ use wasm_bindgen::JsCast as _;
 const CANVAS_ID: &str = "soundcraft_canvas";
 const LOADING_ID: &str = "soundcraft_loading";
 
+/// The language the page asks for: `?lang=` in the address, else the browser's most preferred
+/// language (`navigator.languages`, then `navigator.language`); empty when there is none.
+fn browser_language() -> String {
+    let query = query();
+    let asked = query.trim_start_matches('?').split('&').find_map(|pair| pair.strip_prefix("lang=")).map(str::to_string);
+    let get = |object: &wasm_bindgen::JsValue, key: &str| js_sys::Reflect::get(object, &wasm_bindgen::JsValue::from_str(key)).unwrap_or(wasm_bindgen::JsValue::UNDEFINED);
+    let navigator = web_sys::window().map(|w| get(w.as_ref(), "navigator")).unwrap_or(wasm_bindgen::JsValue::UNDEFINED);
+    let listed = get(&navigator, "languages");
+    let first = if js_sys::Array::is_array(&listed) { js_sys::Array::from(&listed).get(0).as_string() } else { None };
+    asked.or(first).or_else(|| get(&navigator, "language").as_string()).unwrap_or_default()
+}
+
 pub fn start() {
     eframe::WebLogger::init(log::LevelFilter::Info).ok();
     io::set_deliver(download);
@@ -25,6 +37,8 @@ pub fn start() {
             log::error!("missing <canvas id=\"{CANVAS_ID}\">");
             return;
         };
+        // The interface follows the browser's language (German or English).
+        soundcraft_ui_egui::i18n::set_language(&browser_language());
         let mut options = eframe::WebOptions::default();
         if query().contains("webgl")
             && let eframe::egui_wgpu::WgpuSetup::CreateNew(create) = &mut options.wgpu_options.wgpu_setup
@@ -191,6 +205,26 @@ impl WebShell {
     }
 }
 
+thread_local! {
+    /// The title last written to the page, so it is written only when it changes.
+    static PAGE_TITLE: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+}
+
+/// Keep the page's title on the document. eframe's web runner does not set it, and a page that
+/// frames the app (TitanOS) reads the `*` in it as "has unsaved changes": without the title it
+/// can only guess from typing and dragging, and asks before closing when nothing changed.
+fn sync_page_title(title: String) {
+    PAGE_TITLE.with(|last| {
+        let mut last = last.borrow_mut();
+        if *last != title {
+            if let Some(document) = web_sys::window().and_then(|w| w.document()) {
+                document.set_title(&title);
+            }
+            *last = title;
+        }
+    });
+}
+
 impl eframe::App for WebShell {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.take_drops(ctx);
@@ -204,6 +238,8 @@ impl eframe::App for WebShell {
             self.app.load_sample_bytes(&read, bytes);
         }
         self.app.logic(ctx);
+        let engine = &self.app.engine;
+        sync_page_title(format!("{}{} \u{2014} T-Sound", if engine.is_dirty() { "*" } else { "" }, engine.session().name));
         // A prompt opened during this frame becomes a picker on the next one.
         self.take_path_prompt(ctx);
     }

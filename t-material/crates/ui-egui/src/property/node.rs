@@ -93,9 +93,9 @@ fn base_params(app: &mut MaterialCraftApp, ui: &mut Ui, node: &materialcraft_eng
     for (axis, label) in [(0usize, "Width"), (1, "Height")] {
         let mut value = base.size[axis] as f32;
         let caption = if base.size_mode == SizeMode::Absolute {
-            format!("{label}  {} px", 1u32 << base.size[axis].clamp(4, 13))
+            format!("{}  {} px", tr(label), 1u32 << base.size[axis].clamp(4, 13))
         } else {
-            format!("{label}  x {}", 2f32.powi(base.size[axis]))
+            format!("{}  x {}", tr(label), 2f32.powi(base.size[axis]))
         };
 
         if crate::widgets::slider(ui, &caption, &mut value, minimum..=maximum, 0).changed() {

@@ -287,11 +287,11 @@ fn object_tags_without_an_object_before_them_tag_nothing() {
     }
     for bad in ["(x) (y) XT\n", "/id 3 XT\n", "XT\n"] {
         let err = read(stream7(&layer7("L", &format!("{a}f\n{bad}"))).as_bytes()).unwrap_err();
-        assert!(err.contains("operators VectorCraft doesn't know"), "{bad}: {err}");
+        assert!(err.contains("operators T-Vector doesn't know"), "{bad}: {err}");
     }
     // Outside any layer too.
     let err = read(stream7(&format!("(x) (y) XT\n{}", layer7("L", &format!("{a}f\n")))).as_bytes()).unwrap_err();
-    assert!(err.contains("operators VectorCraft doesn't know"), "{err}");
+    assert!(err.contains("operators T-Vector doesn't know"), "{err}");
 }
 
 /// A clipping path's tags are its own, not those of the copy that paints its fill, and a clip
@@ -2139,7 +2139,7 @@ fn ai_variable_library_state() {
     let (vars, _) = read_library(&sample_variable_sets("none", &[]));
     assert!(!vars.locked);
     assert_eq!(vars.active_dataset.as_deref(), Some("ds_two"));
-    // A lock VectorCraft doesn't know reads as unlocked, with a note.
+    // A lock T-Vector doesn't know reads as unlocked, with a note.
     let (vars, notes) = read_library(&sample_variable_sets("everything", &[]));
     assert!(!vars.locked);
     assert_eq!(notes, [partly_read(1)]);
@@ -2200,7 +2200,7 @@ fn ai_variable_library_edge_cases() {
         var("  ", "textcontent"),
         var(&"n".repeat(256), "textcontent"),
         xml_node(1, "variable", XmlValue::Str(""), &[("varName", XmlValue::Bool(true))], &[]),
-        // A trait VectorCraft doesn't know: unknown kind.
+        // A trait T-Vector doesn't know: unknown kind.
         var("Fancy", "sparkle"),
         var("Shown", "visibility"),
         var("File", "fileref"),
@@ -2508,11 +2508,11 @@ fn images_with_alpha_channels() {
     assert!(art(&r.doc).is_empty() && r.warnings.iter().any(|w| w.contains("cut short")));
 }
 
-/// Editing data `data` opens without its one image and with the warning "an image VectorCraft can't read was left out" once.
+/// Editing data `data` opens without its one image and with the warning "an image T-Vector can't read was left out" once.
 fn image_left_out_with_a_warning(data: &[u8]) {
     let r = read(data).unwrap();
     assert!(art(&r.doc).is_empty(), "{:#?}", art(&r.doc));
-    let left_out = r.warnings.iter().filter(|w| *w == "an image VectorCraft can't read was left out").count();
+    let left_out = r.warnings.iter().filter(|w| *w == "an image T-Vector can't read was left out").count();
     assert_eq!(left_out, 1, "{:?}", r.warnings);
 }
 
@@ -2659,7 +2659,7 @@ fn a_version_7_linked_image_without_its_file_name_is_left_out_with_a_warning() {
         let a = art(&r.doc);
         assert_eq!(a.len(), body.matches(" XI\n").count(), "{what}: {:?}", r.warnings);
         assert!(a.iter().all(|n| matches!(&n.kind, NodeKind::Image(im) if im.link.is_none())), "{what}: the embedded images only");
-        let left_out = r.warnings.iter().filter(|w| *w == "an image VectorCraft can't read was left out").count();
+        let left_out = r.warnings.iter().filter(|w| *w == "an image T-Vector can't read was left out").count();
         assert_eq!(left_out, 1, "{what}: {:?}", r.warnings);
         assert!(!r.warnings.iter().any(|w| w == read::LINKED_PLACEHOLDERS), "{what}: {:?}", r.warnings);
     }
@@ -3413,7 +3413,7 @@ fn legacy_tab_stops_copied_into_paragraphs_are_capped() {
     assert!(paras[..1024].iter().all(|p| p.tabs.len() == 1024));
     assert!(paras[1024..].iter().all(|p| p.tabs.is_empty()));
     assert_eq!((paras[2046].justify, paras[2047].justify), (vectorcraft_doc::Justify::Left, vectorcraft_doc::Justify::Center));
-    assert_eq!(r.warnings, ["tab stops past VectorCraft's limits were left out"]);
+    assert_eq!(r.warnings, ["tab stops past T-Vector's limits were left out"]);
 }
 
 /// `Te` (end render, §22.6) reads in a text object with no operands and with four, inside a tab
@@ -3742,11 +3742,11 @@ fn legacy_linked_area_frames_cap_their_copied_tab_stops() {
     let stops: Vec<usize> = frames.iter().map(|(_, f)| f.para_at(0).tabs.len()).collect();
     assert_eq!(stops.iter().filter(|&&n| n == 1024).count(), 1025);
     assert_eq!(stops.iter().filter(|&&n| n == 0).count(), 3071);
-    assert_eq!(r.warnings, ["tab stops past VectorCraft's limits were left out"]);
+    assert_eq!(r.warnings, ["tab stops past T-Vector's limits were left out"]);
 }
 
 /// The warning when linked areas are left out.
-const LINKED_AREAS_LEFT_OUT: &str = "linked type areas past VectorCraft's limits were left out";
+const LINKED_AREAS_LEFT_OUT: &str = "linked type areas past T-Vector's limits were left out";
 
 /// The frames of linked areas times the characters of their story are kept to the reader's
 /// allowance of characters: a story of more than half of it gets one frame, and of a third, two.
@@ -4722,7 +4722,7 @@ fn an_undefined_highlight_is_a_gradient_without_one() {
 #[test]
 fn an_undefined_number_anywhere_else_is_still_an_operator_the_reader_doesnt_know() {
     let err = read(stream(&layer(&format!("{RED}-- 5 m\n0 10 L\n10 10 L\nf\n"))).as_bytes()).unwrap_err();
-    assert!(err.contains("operators VectorCraft doesn't know (`--`)"), "{err}");
+    assert!(err.contains("operators T-Vector doesn't know (`--`)"), "{err}");
 }
 
 #[test]
@@ -7075,7 +7075,7 @@ fn a_files_brushes_come_in_with_their_values_in_the_panels_order() {
     let lib = vectorcraft_brush::library(&r.doc);
     let names: Vec<&str> = lib.iter().map(|b| b.name.as_str()).collect();
     assert_eq!(names, ["Mop", "Nib", "Spray", "Ribbon"], "{:?}", r.warnings);
-    assert!(r.warnings.iter().any(|w| w == "brushes VectorCraft can't read yet were left out of the Brushes panel (1)"), "{:?}", r.warnings);
+    assert!(r.warnings.iter().any(|w| w == "brushes T-Vector can't read yet were left out of the Brushes panel (1)"), "{:?}", r.warnings);
     use vectorcraft_brush::{BrushKind, Variation};
     let BrushKind::Calligraphic(c) = brush_named(&lib, "Nib") else { panic!("calligraphic") };
     assert_eq!((c.angle, c.roundness, c.size), (-10.0, 50.0, 4.0));
@@ -7188,7 +7188,7 @@ fn a_brush_that_cant_be_read_leaves_the_layers_and_other_brushes() {
     assert!(r.warnings.iter().any(|w| w.ends_with("Brushes panel (6)")), "{:?}", r.warnings);
 }
 
-/// Files with brush objects and no brushes VectorCraft reads get an empty list, not the defaults.
+/// Files with brush objects and no brushes T-Vector reads get an empty list, not the defaults.
 #[test]
 fn a_file_whose_brushes_are_all_left_out_has_none() {
     let r = read_ok(&format!("{}{}", plugin_object(PATTERN_BRUSH, "Fence", FENCE), layer("")));
@@ -7412,7 +7412,7 @@ fn a_graphs_settings_paint_nothing_and_its_drawn_art_paints_as_usual() {
 fn graph_operators_outside_a_graph_are_unknown() {
     for stray in ["Gs\n", "Go\n", "1 2 Gc\n"] {
         let err = read(stream7(&layer7("L", &format!("{}{stray}", rect_path(0.0, 0.0, 5.0, 5.0)))).as_bytes()).unwrap_err();
-        assert!(err.contains("operators VectorCraft doesn't know"), "{stray}: {err}");
+        assert!(err.contains("operators T-Vector doesn't know"), "{stray}: {err}");
     }
     for (stray, op) in [("%_2 0 0 0 Go\n", "`Go`"), ("%_GS\n", "`GS`"), ("%_1 2 Gc\n", "`Gc`")] {
         let r = read(stream7(&layer7("L", &format!("{}f\n{stray}", rect_path(0.0, 0.0, 5.0, 5.0)))).as_bytes()).unwrap();

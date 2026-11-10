@@ -46,6 +46,8 @@ pub mod persist;
 #[cfg(target_arch = "wasm32")]
 pub mod storage;
 #[cfg(target_arch = "wasm32")]
+pub mod titanos;
+#[cfg(target_arch = "wasm32")]
 pub mod worker;
 
 #[cfg(target_arch = "wasm32")]

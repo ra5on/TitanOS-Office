@@ -1684,7 +1684,7 @@ fn open_rows(s: &Session) -> (Vec<String>, Vec<String>) {
     (rows, open)
 }
 
-/// #1475: a `.ai` another app wrote keeps no open rows VectorCraft reads, so it opens with every
+/// #1475: a `.ai` another app wrote keeps no open rows T-Vector reads, so it opens with every
 /// row closed, its top-level layers as its groups; a `.ai` VectorCraft wrote, and other formats,
 /// open as before (with their top-level layers open unless the file says otherwise).
 #[test]

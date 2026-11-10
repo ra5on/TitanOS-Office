@@ -425,7 +425,7 @@ pub fn status_bar(app: &mut TextureCraftApp, ui: &mut egui::Ui) {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let gpu = app.gpu.as_ref().map(|g| g.adapter.as_str()).unwrap_or(tr("no GPU"));
                     ui.label(
-                        RichText::new(trf("Version: {version} ({gpu})", &[("version", &texturecraft_engine::VERSION), ("gpu", &gpu)]))
+                        RichText::new(trf("Version: {version} ({gpu})", &[("version", &SHOWN_VERSION), ("gpu", &gpu)]))
                             .size(11.0)
                             .color(tk.text_dim),
                     );
@@ -450,3 +450,10 @@ pub fn status_bar(app: &mut TextureCraftApp, ui: &mut egui::Ui) {
             });
         });
 }
+
+/// The version About shows: the TitanOS-Office release the build belongs to (set by its CI), else
+/// the crate version of the original this program is based on.
+const SHOWN_VERSION: &str = match option_env!("TITANOS_OFFICE_VERSION") {
+    Some(version) => version,
+    None => texturecraft_engine::VERSION,
+};

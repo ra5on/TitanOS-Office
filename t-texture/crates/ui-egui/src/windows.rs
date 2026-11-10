@@ -662,7 +662,7 @@ fn about(app: &mut TextureCraftApp, ctx: &egui::Context) {
     dialog("about", tr("About T-Texture"), &mut open).show(ctx, |ui| {
         ui.vertical_centered(|ui| {
             ui.label(RichText::new("T-Texture").size(22.0).strong().color(tk.text_strong));
-            ui.label(trf("Version {version}", &[("version", &texturecraft_engine::VERSION)]));
+            ui.label(trf("Version {version}", &[("version", &SHOWN_VERSION)]));
             ui.add_space(6.0);
             ui.label(tr("3D texture painting: layers, masks, smart materials, mesh map baking and export."));
             ui.label(tr("Free and open source (MIT OR Apache-2.0), written in Rust."));
@@ -1109,3 +1109,10 @@ pub fn export(app: &mut TextureCraftApp, ctx: &egui::Context) {
         app.ui.windows.export = false;
     }
 }
+
+/// The version About shows: the TitanOS-Office release the build belongs to (set by its CI), else
+/// the crate version of the original this program is based on.
+const SHOWN_VERSION: &str = match option_env!("TITANOS_OFFICE_VERSION") {
+    Some(version) => version,
+    None => texturecraft_engine::VERSION,
+};

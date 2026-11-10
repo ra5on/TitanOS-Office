@@ -346,7 +346,7 @@ fn home_page(
     p.text(
         pos2(x0, y + 8.0),
         Align2::LEFT_CENTER,
-        tr_args("Motion graphics and visual effects · version {}", &[&env!("CARGO_PKG_VERSION")]),
+        tr_args("Motion graphics and visual effects · version {}", &[&option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))]),
         Tokens::ui(12.5),
         t.text_dim,
     );

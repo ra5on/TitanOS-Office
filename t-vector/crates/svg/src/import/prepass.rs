@@ -339,7 +339,7 @@ fn user_data(e: XNode) -> Vec<(String, String)> {
         .collect()
 }
 
-/// The namespaces whose attributes VectorCraft reads, writes or makes again itself: their
+/// The namespaces whose attributes T-Vector reads, writes or makes again itself: their
 /// attributes aren't kept as another application's ([`foreign`]).
 const OWN_NAMESPACES: &[&str] = &[
     "http://www.w3.org/2000/svg",
@@ -363,7 +363,7 @@ fn foreign_ns<'a>(a: &roxmltree::Attribute<'a, '_>) -> Option<&'a str> {
 }
 
 /// Does any element of `xml` have an attribute in another application's namespace? Most files
-/// declare only namespaces VectorCraft reads itself (XLink), and skip the scan for them.
+/// declare only namespaces T-Vector reads itself (XLink), and skip the scan for them.
 fn has_foreign_attributes(xml: &roxmltree::Document) -> bool {
     xml.descendants().filter(XNode::is_element).any(|e| e.attributes().any(|a| foreign_ns(&a).is_some()))
 }

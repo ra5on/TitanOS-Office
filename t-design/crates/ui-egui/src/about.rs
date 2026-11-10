@@ -10,8 +10,9 @@ use crate::theme::{Tokens, semibold};
 
 /// The mark's blue.
 pub const BRAND: Color32 = Color32::from_rgb(0x4e, 0x7b, 0xfb);
-/// Discord's brand colour, used for the "Join our Discord" buttons (colour only; no Discord artwork).
-pub const DISCORD: Color32 = Color32::from_rgb(0x58, 0x65, 0xf2);
+/// The fill of the "TitanOS-Office on GitHub" buttons: the mark's blue (TitanOS-Office: was
+/// Discord's brand colour, for the original's "Join our Discord" button).
+pub const LINK_BUTTON: Color32 = BRAND;
 
 /// The sibling apps (slug, name, what it is); only the i18n tests use it since TitanOS-Office
 /// removed the "More ArtCraft apps" row.
@@ -36,29 +37,29 @@ pub fn paint_mark(ui: &egui::Ui, rect: Rect, color: Color32) {
     ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, "T", egui::FontId::proportional(side * 0.62), Color32::WHITE);
 }
 
-/// A speech-bubble glyph (drawn in code) for Discord buttons.
-pub fn paint_chat_icon(p: &egui::Painter, c: egui::Pos2, s: f32, color: Color32) {
-    let body = Rect::from_center_size(c - vec2(0.0, s * 0.06), vec2(s, s * 0.72));
-    p.rect_filled(body, s * 0.24, color);
-    let tail = vec![
-        pos2(body.left() + s * 0.22, body.bottom() - 1.0),
-        pos2(body.left() + s * 0.12, body.bottom() + s * 0.24),
-        pos2(body.left() + s * 0.44, body.bottom() - 1.0),
-    ];
-    p.add(egui::Shape::convex_polygon(tail, color, Stroke::NONE));
-    let eye = s * 0.09;
-    let bg = if color.r() as u32 + color.g() as u32 + color.b() as u32 > 380 { DISCORD } else { Color32::WHITE };
-    p.circle_filled(body.center() - vec2(s * 0.18, 0.0), eye, bg);
-    p.circle_filled(body.center() + vec2(s * 0.18, 0.0), eye, bg);
+/// A generic source-repository glyph (drawn in code) for the GitHub buttons: a trunk with one
+/// branch, three nodes. No GitHub artwork (its logo is a trademark).
+pub fn paint_repo_icon(p: &egui::Painter, c: egui::Pos2, s: f32, color: Color32) {
+    let line = Stroke::new((s * 0.11).max(1.0), color);
+    let node = s * 0.15;
+    let top = c + vec2(-s * 0.24, -s * 0.32);
+    let bottom = c + vec2(-s * 0.24, s * 0.32);
+    let side = c + vec2(s * 0.26, -s * 0.12);
+    p.line_segment([top, bottom], line);
+    p.line_segment([side, pos2(side.x, c.y + s * 0.04)], line);
+    p.line_segment([pos2(side.x, c.y + s * 0.04), pos2(bottom.x, c.y + s * 0.2)], line);
+    for at in [top, bottom, side] {
+        p.circle_filled(at, node, color);
+    }
 }
 
-/// The Discord button's size for `label`: `min`, widened when the label would not fit inside it.
+/// The GitHub button's size for `label`: `min`, widened when the label would not fit inside it.
 pub fn discord_button_size(ctx: &egui::Context, label: &str, min: egui::Vec2) -> egui::Vec2 {
     let galley = crate::rtl::plain(ctx, label, semibold((min.y * 0.42).max(11.0)), Color32::WHITE);
     egui::vec2(min.x.max(min.y * 0.5 + 8.0 + galley.size().x + min.y), min.y)
 }
 
-/// The big "Join our Discord" button. Returns true when clicked. `size` is the minimum: a longer label
+/// The big "TitanOS-Office on GitHub" button (it keeps the original's name). Returns true when clicked. `size` is the minimum: a longer label
 /// widens the button (see `discord_button_size`) rather than spilling out of it.
 pub fn discord_button(ui: &mut egui::Ui, label: &str, size: egui::Vec2) -> bool {
     let size = discord_button_size(ui.ctx(), label, size);
@@ -68,10 +69,10 @@ pub fn discord_button(ui: &mut egui::Ui, label: &str, size: egui::Vec2) -> bool 
     let total = icon + 8.0 + galley.size().x;
     let (r, resp) = ui.allocate_exact_size(size, Sense::click());
     let resp = resp.on_hover_text(links::DISCORD).on_hover_cursor(egui::CursorIcon::PointingHand);
-    let fill = if resp.hovered() { Color32::from_rgb(0x47, 0x52, 0xc4) } else { DISCORD };
+    let fill = if resp.hovered() { LINK_BUTTON.gamma_multiply(0.85) } else { LINK_BUTTON };
     ui.painter().rect_filled(r, size.y / 2.0, fill);
     let x0 = r.center().x - total / 2.0;
-    paint_chat_icon(ui.painter(), pos2(x0 + icon / 2.0, r.center().y), icon, Color32::WHITE);
+    paint_repo_icon(ui.painter(), pos2(x0 + icon / 2.0, r.center().y), icon, Color32::WHITE);
     ui.painter().galley(pos2(x0 + icon + 8.0, r.center().y - galley.size().y / 2.0), galley, Color32::WHITE);
     resp.clicked()
 }
@@ -139,7 +140,7 @@ pub fn show(app: &mut DesignApp, ctx: &egui::Context) {
             ));
             crate::rtl::label(
                 ui,
-                egui::RichText::new(format!("{} {}", crate::i18n::tr(&app.ui.language, "Version"), env!("CARGO_PKG_VERSION")))
+                egui::RichText::new(format!("{} {}", crate::i18n::tr(&app.ui.language, "Version"), option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))))
                     .size(12.0)
                     .color(t.text_dim),
             );
@@ -152,12 +153,12 @@ pub fn show(app: &mut DesignApp, ctx: &egui::Context) {
             ));
             ui.label(crate::rtl::widget(
                 ui,
-                egui::RichText::new("Part of TitanOS: a modified version of DesignCraft (MIT OR Apache-2.0).")
+                egui::RichText::new(crate::i18n::tr(&app.ui.language, "Part of TitanOS: a modified version of DesignCraft (MIT OR Apache-2.0)."))
                     .size(12.0)
                     .color(t.text_dim),
             ));
             ui.add_space(16.0);
-            if discord_button(ui, "TitanOS-Office on GitHub", vec2(300.0, 40.0)) {
+            if discord_button(ui, crate::i18n::tr(&app.ui.language, "TitanOS-Office on GitHub"), vec2(300.0, 40.0)) {
                 open = Some("discord");
             }
             ui.add_space(4.0);

@@ -87,6 +87,7 @@ fn catalog(language: &str) -> Option<&'static Catalog> {
     static GEORGIAN_CATALOG: Catalog = Catalog { rows: GEORGIAN, categories: GEORGIAN_CATEGORIES, index: OnceLock::new() };
     static SWEDISH_CATALOG: Catalog = Catalog { rows: SWEDISH, categories: SWEDISH_CATEGORIES, index: OnceLock::new() };
     static FRENCH_CATALOG: Catalog = Catalog { rows: FRENCH, categories: FRENCH_CATEGORIES, index: OnceLock::new() };
+    static GERMAN_CATALOG: Catalog = Catalog { rows: GERMAN, categories: GERMAN_CATEGORIES, index: OnceLock::new() };
     match language {
         "zh-hans" => Some(&SIMPLIFIED),
         "zh-hant" => Some(&TRADITIONAL),
@@ -96,6 +97,7 @@ fn catalog(language: &str) -> Option<&'static Catalog> {
         "ka" => Some(&GEORGIAN_CATALOG),
         "sv" => Some(&SWEDISH_CATALOG),
         "fr" => Some(&FRENCH_CATALOG),
+        "de" => Some(&GERMAN_CATALOG),
         _ => None,
     }
 }
@@ -1831,6 +1833,34 @@ const FRENCH: &[Row] = &[
 ];
 
 /// French (`fr`) category labels, keyed by the registry's English category.
+/// German (TitanOS-Office): no effect has a row yet, so effects keep the registry's English names;
+/// the category folders are translated.
+const GERMAN: &[Row] = &[];
+
+const GERMAN_CATEGORIES: &[(&str, &str)] = &[
+    ("3D Channel", "3D-Kanal"),
+    ("Audio", "Audio"),
+    ("Blur & Sharpen", "Weich- und Scharfzeichnen"),
+    ("Channel", "Kanal"),
+    ("Color Correction", "Farbkorrektur"),
+    ("Distort", "Verzerren"),
+    ("Expression Controls", "Expression-Steuerungen"),
+    ("Generate", "Generieren"),
+    ("Immersive Video", "Immersives Video"),
+    ("Keying", "Keying"),
+    ("Matte", "Maske"),
+    ("Noise & Grain", "Rauschen und Körnung"),
+    ("Obsolete", "Veraltet"),
+    ("Paint", "Malen"),
+    ("Perspective", "Perspektive"),
+    ("Simulation", "Simulation"),
+    ("Stylize", "Stilisieren"),
+    ("Text", "Text"),
+    ("Time", "Zeit"),
+    ("Transition", "Überblendung"),
+    ("Utility", "Dienstprogramm"),
+];
+
 const FRENCH_CATEGORIES: &[(&str, &str)] = &[
     ("3D Channel", "Canal 3D"),
     ("Audio", "Audio"),

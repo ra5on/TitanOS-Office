@@ -60,10 +60,17 @@ pub fn status_bar(app: &mut MaterialCraftApp, ui: &mut Ui) {
                     tr("Cache"),
                     cache >> 20,
                     tr("Version"),
-                    materialcraft_engine::VERSION,
+                    SHOWN_VERSION,
                 );
                 ui.label(RichText::new(text).size(11.0).color(tk.text_dim));
             });
         });
     });
 }
+
+/// The version About shows: the TitanOS-Office release the build belongs to (set by its CI), else
+/// the crate version of the original this program is based on.
+const SHOWN_VERSION: &str = match option_env!("TITANOS_OFFICE_VERSION") {
+    Some(version) => version,
+    None => materialcraft_engine::VERSION,
+};

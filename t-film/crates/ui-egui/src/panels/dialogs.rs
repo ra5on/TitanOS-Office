@@ -470,7 +470,7 @@ fn about_tab(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
     crate::brand::paint_wordmark(ui, egui::pos2(r.min.x, r.center().y), 20.0, app.ui.dark);
     ui.add_space(6.0);
     ui.heading("T-Film");
-    ui.label(tlf!("Version {version}", version = env!("CARGO_PKG_VERSION")));
+    ui.label(tlf!("Version {version}", version = option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))));
     ui.label(tl!("A clean-room, pure-Rust non-linear video editor."));
     ui.label("Part of TitanOS: a modified version of FilmCraft (MIT OR Apache-2.0).");
     ui.add_space(10.0);

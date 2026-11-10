@@ -226,12 +226,13 @@ fn community_card(app: &mut DesignApp, ui: &mut egui::Ui) {
         // Wide enough for the longer translations of the line under the title, with the button
         // at the right edge; the text wraps before the button's space rather than run under it.
         const BUTTON: egui::Vec2 = vec2(190.0, 38.0);
-        ui.set_max_width(760.0);
+        // Never wider than the room there is: in a narrow window the button ran under the panels.
+        ui.set_max_width(ui.available_width().min(760.0));
         ui.horizontal(|ui| {
             let (r, _) = ui.allocate_exact_size(vec2(44.0, 44.0), Sense::hover());
             crate::about::paint_mark(ui, r, crate::about::BRAND);
             ui.add_space(8.0);
-            let label = "TitanOS-Office on GitHub";
+            let label = crate::i18n::tr(&app.ui.language, "TitanOS-Office on GitHub");
             let button = crate::about::discord_button_size(ui.ctx(), label, BUTTON);
             let text_width = (ui.available_width() - button.x - 16.0).max(120.0);
             ui.vertical(|ui| {
@@ -239,11 +240,11 @@ fn community_card(app: &mut DesignApp, ui: &mut egui::Ui) {
                 ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
                 ui.label(crate::rtl::widget(
                     ui,
-                    egui::RichText::new("T-Design is part of TitanOS").font(semibold(14.0)).color(t.text_strong),
+                    egui::RichText::new(crate::i18n::tr(&app.ui.language, "T-Design is part of TitanOS")).font(semibold(14.0)).color(t.text_strong),
                 ));
                 ui.label(crate::rtl::widget(
                     ui,
-                    egui::RichText::new("A modified version of DesignCraft (MIT OR Apache-2.0).")
+                    egui::RichText::new(crate::i18n::tr(&app.ui.language, "A modified version of DesignCraft (MIT OR Apache-2.0)."))
                         .size(12.0)
                         .color(t.text_dim),
                 ));
@@ -252,7 +253,7 @@ fn community_card(app: &mut DesignApp, ui: &mut egui::Ui) {
                     for (text, id) in [("Original: DesignCraft", "help.appPage"), ("GitHub", "help.github"), ("TitanOS", "help.website")] {
                         let url = designcraft_engine::links::get(&id[5..]).unwrap_or_default();
                         let l = ui
-                            .add(egui::Label::new(egui::RichText::new(text).size(12.0).color(t.accent).underline()).sense(Sense::click()))
+                            .add(egui::Label::new(egui::RichText::new(crate::i18n::tr(&app.ui.language, text)).size(12.0).color(t.accent).underline()).sense(Sense::click()))
                             .on_hover_text(url)
                             .on_hover_cursor(egui::CursorIcon::PointingHand);
                         if l.clicked() {

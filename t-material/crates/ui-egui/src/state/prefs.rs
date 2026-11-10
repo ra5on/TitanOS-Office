@@ -9,6 +9,10 @@ use materialcraft_engine::CameraPrefs;
 pub struct Prefs {
     /// UI language code (`i18n::LANGUAGES`)
     pub language: String,
+    /// The language was picked in Preferences. Until then the UI follows the system's (the
+    /// browser's) language at every start, so a language added later (German) reaches people
+    /// whose first run stored English.
+    pub language_chosen: bool,
     pub brightness: Brightness,
     pub accent: Accent,
     pub ui_scale: f32,
@@ -31,6 +35,7 @@ impl Default for Prefs {
     fn default() -> Self {
         Prefs {
             language: crate::i18n::os_language().into(),
+            language_chosen: false,
             brightness: Brightness::default(),
             accent: Accent::default(),
             ui_scale: 1.0,

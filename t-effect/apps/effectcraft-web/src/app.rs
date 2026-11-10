@@ -7,8 +7,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use effectcraft_engine::Session;
 
 use crate::startup::Startup;
-use crate::{api, audio, browse, config_file, diskcache, files, frames, persist, storage, worker};
-use effectcraft_ui_egui::EffectcraftApp;
+use crate::{api, audio, browse, config_file, diskcache, files, frames, persist, storage, titanos, worker};
+use effectcraft_ui_egui::{EffectcraftApp, i18n};
 use serde_json::json;
 use wasm_bindgen::prelude::*;
 
@@ -121,6 +121,8 @@ impl eframe::App for WebApp {
             f(&mut self.app);
         }
         self.app.tick(ctx, frame);
+        // A project saved this frame inside a TitanOS window is not on the NAS yet.
+        titanos::settle(&mut self.app.session);
         // eframe on the web ignores `ViewportCommand::Title`: the tab title follows the open document here.
         if self.app.window_title() != self.document_title {
             self.document_title = self.app.window_title().to_owned();
@@ -222,11 +224,16 @@ fn install_hooks(app: &mut EffectcraftApp) {
         if !std::path::Path::new(name).extension().is_some_and(|e| e.eq_ignore_ascii_case("ecproj") || e.eq_ignore_ascii_case("ecprojx")) {
             return Some(files::path_for(name));
         }
+        // In a TitanOS window its save dialog asks for the name and before replacing a file.
+        if titanos::hosted() {
+            titanos::name_asked();
+            return Some(files::path_for(name));
+        }
         let window = web_sys::window()?;
-        let typed = window.prompt_with_message_and_default("Save project as:", name).ok().flatten();
+        let typed = window.prompt_with_message_and_default(&i18n::text("Save project as:"), name).ok().flatten();
         let typed = crate::store::typed_save_name(name, typed)?;
         let path = files::path_for(&typed);
-        if files::get(&path).is_some() && !window.confirm_with_message(&format!("{typed} already exists. Replace it?")).unwrap_or(false) {
+        if files::get(&path).is_some() && !window.confirm_with_message(&i18n::text_args("{} already exists. Replace it?", &[&typed])).unwrap_or(false) {
             return None;
         }
         Some(path)
@@ -247,6 +254,7 @@ pub async fn start(canvas_id: String) -> Result<(), JsValue> {
     let doc = web_sys::window().and_then(|w| w.document()).ok_or("no document")?;
     let canvas: web_sys::HtmlCanvasElement = doc.get_element_by_id(&canvas_id).ok_or("no canvas")?.dyn_into()?;
     install_canvas_shortcuts(&canvas);
+    titanos::install(&canvas);
     let empty = query_flag("empty");
     let home = query_flag("home");
     // Browser storage: settings, recent projects, imported media, saved projects, auto-saves and
@@ -339,6 +347,7 @@ pub async fn start(canvas_id: String) -> Result<(), JsValue> {
             }),
         )
         .await?;
+    titanos::ready();
     // Hide the loading message once the app runs.
     if let Some(el) = doc.get_element_by_id("loading") {
         el.remove();

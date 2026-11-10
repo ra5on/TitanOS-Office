@@ -467,7 +467,7 @@ fn doc_to_save(st: &DocState, f: &Format) -> Arc<Document> {
 fn fidelity_warning(f: &Format) -> Option<String> {
     (!is_native(f)).then(|| {
         format!(
-            "{} keeps the artwork but not everything a VectorCraft document holds (editable effects, symbols, swatches, styles): save as VectorCraft to keep it all editable",
+            "{} keeps the artwork but not everything a T-Vector document holds (editable effects, symbols, swatches, styles): save as T-Vector to keep it all editable",
             f.label
         )
     })
@@ -575,10 +575,10 @@ fn blank_pages(doc: &Document) -> Document {
 }
 
 /// Why a `.ai` file saved without PDF content looks empty elsewhere.
-const NOT_PDF_COMPATIBLE: &str = "saved without PDF content: VectorCraft opens it as before, other apps show empty pages";
+const NOT_PDF_COMPATIBLE: &str = "saved without PDF content: T-Vector opens it as before, other apps show empty pages";
 /// The same, for a file that carries the editing copy of its art.
 const NOT_PDF_COMPATIBLE_EDITING: &str =
-    "saved without PDF content: VectorCraft and apps that read its editing data open it, other apps show empty pages";
+    "saved without PDF content: T-Vector and apps that read its editing data open it, other apps show empty pages";
 
 /// `f` (`.ai` or `.ait`) named, in its option errors, as a file saved without PDF content.
 fn without_pdf(f: &Format) -> Format {

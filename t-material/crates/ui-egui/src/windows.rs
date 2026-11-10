@@ -264,6 +264,7 @@ fn preferences(app: &mut MaterialCraftApp, ctx: &egui::Context) {
             for l in &crate::i18n::LANGUAGES {
                 if ui.selectable_label(p.language == l.code, l.name).clicked() {
                     p.language = l.code.to_owned();
+                    p.language_chosen = true;
                     crate::i18n::set_language(&p.language);
                 }
             }
@@ -301,13 +302,13 @@ fn about(app: &mut MaterialCraftApp, ctx: &egui::Context) {
         let tk = Tokens::get(ui.ctx());
         ui.vertical_centered(|ui| {
             ui.label(RichText::new("T-Material").size(22.0).strong().color(tk.accent));
-            ui.label(format!("{} {}", tr("Version"), materialcraft_engine::VERSION));
+            ui.label(format!("{} {}", tr("Version"), SHOWN_VERSION));
             ui.add_space(6.0);
             ui.label(tr("Node-based procedural materials, built in pure Rust."));
-            ui.label("Part of TitanOS: a modified version of MaterialCraft (MIT OR Apache-2.0).");
+            ui.label(tr("Part of TitanOS: a modified version of MaterialCraft (MIT OR Apache-2.0)."));
             ui.add_space(6.0);
-            ui.hyperlink_to("Source code: github.com/ra5on/TitanOS-Office", "https://github.com/ra5on/TitanOS-Office");
-            ui.hyperlink_to("Original: github.com/storytold/materialcraft", "https://github.com/storytold/materialcraft");
+            ui.hyperlink_to(tr("Source code: github.com/ra5on/TitanOS-Office"), "https://github.com/ra5on/TitanOS-Office");
+            ui.hyperlink_to(tr("Original: github.com/storytold/materialcraft"), "https://github.com/storytold/materialcraft");
             ui.add_space(6.0);
             ui.label(RichText::new("MIT OR Apache-2.0").size(11.0).color(tk.text_dim));
         });
@@ -369,7 +370,7 @@ fn home(app: &mut MaterialCraftApp, ctx: &egui::Context) {
                 }
                 ui.add_space(16.0);
                 ui.hyperlink_to(tr("Documentation"), "https://github.com/storytold/materialcraft#readme");
-                ui.hyperlink_to("TitanOS-Office on GitHub", "https://github.com/ra5on/TitanOS-Office");
+                ui.hyperlink_to(tr("TitanOS-Office on GitHub"), "https://github.com/ra5on/TitanOS-Office");
                 ui.add_space(16.0);
                 ui.checkbox(&mut app.ui.prefs.show_home, tr("Show at startup"));
             });
@@ -606,3 +607,10 @@ pub(crate) fn open_path_now(app: &mut MaterialCraftApp, path: &str) {
 #[cfg(all(test, not(target_arch = "wasm32")))]
 #[path = "windows.test.rs"]
 mod tests;
+
+/// The version About shows: the TitanOS-Office release the build belongs to (set by its CI), else
+/// the crate version of the original this program is based on.
+const SHOWN_VERSION: &str = match option_env!("TITANOS_OFFICE_VERSION") {
+    Some(version) => version,
+    None => materialcraft_engine::VERSION,
+};
