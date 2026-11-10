@@ -303,9 +303,10 @@ fn community_buttons(app: &mut EffectcraftApp, ui: &mut egui::Ui, p: &egui::Pain
     let label = p.layout_no_wrap("GitHub".to_string(), Tokens::semibold(12.0), Color32::WHITE);
     let discord = Rect::from_min_max(pos2(rx - (10.0 + 14.0 + 6.0 + label.size().x + 12.0), cy - 13.0), pos2(rx, cy + 13.0));
     let dresp = ui.interact(discord, egui::Id::unique("hdr-discord"), Sense::click());
-    let dc = Color32::from_rgb(0x58, 0x65, 0xf2);
-    p.rect_filled(discord, 13.0, if dresp.hovered() { dc.gamma_multiply(1.2) } else { dc });
-    icons::paint(p, Rect::from_center_size(pos2(discord.min.x + 17.0, cy), vec2(14.0, 14.0)), Icon::Chat, Color32::WHITE);
+    // TitanOS-Office: the project on GitHub, in the app's own accent with a link mark (it was the
+    // original's Discord pill: Discord's colour and a speech bubble).
+    p.rect_filled(discord, 13.0, if dresp.hovered() { t.accent_hover } else { t.accent });
+    icons::paint(p, Rect::from_center_size(pos2(discord.min.x + 17.0, cy), vec2(14.0, 14.0)), Icon::Link, Color32::WHITE);
     p.galley(pos2(discord.min.x + 30.0, cy - label.size().y / 2.0), label, Color32::WHITE);
     app.auto.add("header.discord", discord, "TitanOS-Office on GitHub");
     if dresp.on_hover_text("TitanOS-Office on GitHub").clicked() {
