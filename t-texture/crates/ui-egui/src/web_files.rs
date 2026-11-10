@@ -215,8 +215,20 @@ mod web {
 
     /// Refresh [`unsaved`] (once per frame).
     pub fn sync_unsaved(app: &TextureCraftApp) {
-        UNSAVED.store(app.session.modified, std::sync::atomic::Ordering::Relaxed);
+        let modified = app.session.modified;
+        UNSAVED.store(modified, std::sync::atomic::Ordering::Relaxed);
+        // The page's title carries the same state as a `*`: a page that frames the app (TitanOS)
+        // reads it to know whether closing would lose work. Written only when it changes.
+        let state = if modified { 2 } else { 1 };
+        if TITLED.swap(state, std::sync::atomic::Ordering::Relaxed) != state
+            && let Some(document) = web_sys::window().and_then(|w| w.document())
+        {
+            document.set_title(if modified { "* T-Texture" } else { "T-Texture" });
+        }
     }
+
+    /// What the page's title says: 0 not written yet, 1 no unsaved changes, 2 unsaved changes.
+    static TITLED: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
 
     /// Whether closing or reloading the page would lose unsaved changes.
     pub fn unsaved() -> bool {

@@ -225,6 +225,8 @@ impl eframe::App for MaterialCraftApp {
 
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.step(ctx);
+        #[cfg(target_arch = "wasm32")]
+        sync_page_title(self.session.modified);
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
@@ -308,3 +310,18 @@ impl MaterialCraftApp {
 #[cfg(test)]
 #[path = "material_craft_app.test.rs"]
 mod tests;
+
+/// Keep the page's title on the package's state: a `*` while it has unsaved changes. A page that
+/// frames the app (TitanOS) reads it to know whether closing would lose work; without it, it can
+/// only guess from typing and dragging. Written only when the state changes.
+#[cfg(target_arch = "wasm32")]
+fn sync_page_title(modified: bool) {
+    /// What the title says: 0 not written yet, 1 no unsaved changes, 2 unsaved changes.
+    static TITLED: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+    let state = if modified { 2 } else { 1 };
+    if TITLED.swap(state, std::sync::atomic::Ordering::Relaxed) != state
+        && let Some(document) = web_sys::window().and_then(|w| w.document())
+    {
+        document.set_title(if modified { "* T-Material" } else { "T-Material" });
+    }
+}
