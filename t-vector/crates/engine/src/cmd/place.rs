@@ -182,7 +182,7 @@ fn load(p: &Value, cmd: &str, board: Option<Rect>, link_pdf: bool) -> Result<Loa
         return Ok(Loaded { name, format: &doc::FORMAT, art: Art::Text(story), natural: TEXT_FRAME, warnings, link: None, board: None });
     }
     let format = fileio::detect(src.name, &src.bytes)
-        .ok_or_else(|| bad(cmd, format!("can't place `{name}`: not a format VectorCraft reads (see document.formats)")))?;
+        .ok_or_else(|| bad(cmd, format!("can't place `{name}`: not a format T-Vector reads (see document.formats)")))?;
     let page = match p.get("page") {
         None => 1,
         Some(v) => v.as_u64().filter(|n| (1..=100_000).contains(n)).ok_or_else(|| bad(cmd, "page must be a whole number from 1"))? as usize,

@@ -29,7 +29,7 @@ pub struct ObjectAttributes {
     pub events: Vec<(String, String)>,
     /// Attributes in other applications' XML namespaces, in order, kept from SVG import to SVG
     /// export: what another tool notes on an object (a plotter's pen, a cutter's passes) survives
-    /// a round trip through VectorCraft. Nothing in VectorCraft reads them. They are the object's,
+    /// a round trip through VectorCraft. Nothing in T-Vector reads them. They are the object's,
     /// as `data` is, so copies, duplicates and pastes keep them and a deleted object takes them
     /// with it.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
