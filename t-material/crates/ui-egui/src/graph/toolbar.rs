@@ -162,12 +162,20 @@ fn parent_size(app: &mut MaterialCraftApp, ui: &mut Ui) {
             }
         });
         crate::widgets::name(&r.response, egui::Role::ComboBox, if id == "parent-w" { "Parent width" } else { "Parent height" });
+        r.response.on_hover_text(tr("Parent size"));
     };
 
     combo(ui, "parent-h", &mut nh);
     ui.label("x");
     combo(ui, "parent-w", &mut nw);
-    ui.label(egui::RichText::new(tr("Parent size:")).color(Tokens::get(ui.ctx()).text_dim));
+    // The caption only where it fits beside the node buttons: in a narrow window it lay over
+    // them. The fields say what they are on hover.
+    let caption = tr("Parent size:");
+    let dim = Tokens::get(ui.ctx()).text_dim;
+    let width = ui.painter().layout_no_wrap(caption.to_string(), egui::TextStyle::Body.resolve(ui.style()), dim).size().x;
+    if ui.available_width() >= width + 2.0 * ui.spacing().item_spacing.x {
+        ui.label(egui::RichText::new(caption).color(dim));
+    }
     if (nw, nh) != (w, h) {
         app.run("graph.size", json!({"log2": [nw, nh]}));
     }
