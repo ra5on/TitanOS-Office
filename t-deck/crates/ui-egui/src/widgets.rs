@@ -49,6 +49,8 @@ fn big_button_width(text_w: f32, split: bool) -> f32 {
 /// response). Like Office's split buttons, the icon and the label text run the main command; only
 /// the chevron at the end of the label row opens the menu.
 pub fn big_button_ex(ui: &mut Ui, icon: Icon, label: &str, enabled: bool, split: bool, selected: bool) -> (Response, Option<Response>) {
+    // TitanOS-Office: drawn in the interface language (`crate::i18n`); callers pass the English label.
+    let label = crate::i18n::tr(label);
     let t = Tokens::get(ui.ctx());
     let font = theme::font(11.0);
     let lines: Vec<&str> = wrap_label(label);
@@ -148,6 +150,9 @@ pub fn small_button_named(
     selected: bool,
     split: bool,
 ) -> (Response, Option<Response>) {
+    // TitanOS-Office: drawn in the interface language (`crate::i18n`); callers pass the English label.
+    let label = crate::i18n::tr(label);
+    let name = crate::i18n::tr(name);
     let t = Tokens::get(ui.ctx());
     let font = theme::font(12.0);
     let tw = if label.is_empty() { 0.0 } else { ui.fonts_mut(|f| f.layout_no_wrap(label.to_string(), font.clone(), t.text).size().x) + 5.0 };
@@ -244,6 +249,8 @@ fn split_popup_id(main: &Response) -> egui::Id {
 /// A menu choice ticked in the icon column (Align to Slide…), its text lined up with the
 /// [`small_button`] items around it.
 pub fn check_item(ui: &mut Ui, label: &str, enabled: bool, on: bool) -> Response {
+    // TitanOS-Office: drawn in the interface language (`crate::i18n`); callers pass the English label.
+    let label = crate::i18n::tr(label);
     let t = Tokens::get(ui.ctx());
     let font = theme::font(12.0);
     let tw = ui.fonts_mut(|f| f.layout_no_wrap(label.to_string(), font.clone(), t.text).size().x) + 5.0;
@@ -573,6 +580,7 @@ pub fn text_draft(stored: Option<(String, String)>, current: &str) -> String {
 
 /// Section header inside panes.
 pub fn section(ui: &mut Ui, title: &str, open: bool) -> bool {
+    let title = crate::i18n::tr(title);
     let t = Tokens::get(ui.ctx());
     let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
     let p = ui.painter();
@@ -589,10 +597,12 @@ pub fn section(ui: &mut Ui, title: &str, open: bool) -> bool {
 
 /// A button with an optional label and a painted dropdown chevron (the UI font has no ▾).
 pub fn drop_button(ui: &mut Ui, label: &str, size: egui::Vec2, enabled: bool) -> egui::Response {
+    // TitanOS-Office: drawn in the interface language (`crate::i18n`); callers pass the English label.
+    let label = crate::i18n::tr(label);
     let t = Tokens::get(ui.ctx());
     let r = ui
         .add_enabled(enabled, egui::Button::new(if label.is_empty() { String::new() } else { format!("{label}   ") }).min_size(size))
-        .on_hover_text(if label.is_empty() { "Options" } else { label });
+        .on_hover_text(if label.is_empty() { crate::i18n::tr("Options") } else { label });
     let col = if enabled { t.text_dim } else { t.text_faint };
     chevron(ui.painter(), egui::pos2(r.rect.max.x - 8.0, r.rect.center().y), 3.0, col);
     r
