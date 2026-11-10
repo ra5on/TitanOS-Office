@@ -266,6 +266,12 @@ const DE: &[(&str, &str)] = &[
     ("Dark\nMode", "Dunkler\nModus"),
     ("File (Alt+F)", "Datei (Alt+F)"),
     ("Options", "Optionen"),
+    // The dialog buttons of the Home tab and the title bar's show button.
+    ("Font…", "Schrift…"),
+    ("Font", "Schriftart"),
+    ("Paragraph…", "Absatz…"),
+    ("Paragraph", "Absatz"),
+    ("Present", "Vorführen"),
 ];
 
 #[cfg(test)]
