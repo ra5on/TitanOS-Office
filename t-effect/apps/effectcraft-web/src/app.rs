@@ -226,6 +226,7 @@ fn install_hooks(app: &mut EffectcraftApp) {
         }
         // In a TitanOS window its save dialog asks for the name and before replacing a file.
         if titanos::hosted() {
+            titanos::name_asked();
             return Some(files::path_for(name));
         }
         let window = web_sys::window()?;
@@ -253,7 +254,7 @@ pub async fn start(canvas_id: String) -> Result<(), JsValue> {
     let doc = web_sys::window().and_then(|w| w.document()).ok_or("no document")?;
     let canvas: web_sys::HtmlCanvasElement = doc.get_element_by_id(&canvas_id).ok_or("no canvas")?.dyn_into()?;
     install_canvas_shortcuts(&canvas);
-    titanos::install();
+    titanos::install(&canvas);
     let empty = query_flag("empty");
     let home = query_flag("home");
     // Browser storage: settings, recent projects, imported media, saved projects, auto-saves and
@@ -346,6 +347,7 @@ pub async fn start(canvas_id: String) -> Result<(), JsValue> {
             }),
         )
         .await?;
+    titanos::ready();
     // Hide the loading message once the app runs.
     if let Some(el) = doc.get_element_by_id("loading") {
         el.remove();

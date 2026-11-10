@@ -82,8 +82,23 @@ fn mime(name: &str) -> &'static str {
     }
 }
 
-/// Offer `data` as a download named `name`.
+/// Offer `data` as a download named `name`; a TitanOS window that speaks the host events gets
+/// it as a file beside its document instead.
 pub fn download(name: &str, data: &[u8]) -> Result<(), JsValue> {
+    if crate::titanos::bridged() {
+        if !crate::titanos::send_file(name, data, false) {
+            return Err(JsValue::from_str("the TitanOS window did not take the file"));
+        }
+    } else {
+        browser_download(name, data)?;
+    }
+    // A TitanOS window answers every file it gets (`crate::titanos`): this one is not the project.
+    crate::titanos::handed(None);
+    Ok(())
+}
+
+/// Start the browser's download of `data` as `name`.
+fn browser_download(name: &str, data: &[u8]) -> Result<(), JsValue> {
     let doc = web_sys::window().and_then(|w| w.document()).ok_or("no document")?;
     let parts = js_sys::Array::of1(&js_sys::Uint8Array::from(data));
     let bag = web_sys::BlobPropertyBag::new();
@@ -128,7 +143,12 @@ impl Services for WebServices {
         if quiet || crate::is_worker() {
             return Ok(());
         }
-        download(file_name(path), data).map_err(|e| std::io::Error::other(format!("download failed: {e:?}")))?;
+        // A TitanOS window that speaks the host events takes the file at the end of the frame.
+        if crate::titanos::bridged() {
+            crate::titanos::wrote(path);
+            return Ok(());
+        }
+        browser_download(file_name(path), data).map_err(|e| std::io::Error::other(format!("download failed: {e:?}")))?;
         // In a TitanOS window the download opens its save dialog: the window's answer decides
         // whether a project counts as saved (`crate::titanos`).
         crate::titanos::handed(Some(path));
@@ -207,9 +227,8 @@ pub fn flush_downloads() {
             download(&format!("{stem}.zip"), &zip_store(&out))
         }
     };
-    match r {
-        Ok(()) => crate::titanos::handed(None),
-        Err(e) => log::warn!("download failed: {e:?}"),
+    if let Err(e) = r {
+        log::warn!("download failed: {e:?}");
     }
 }
 
