@@ -1126,9 +1126,17 @@ pub(crate) fn inspect(app: &DesignApp, ctx: &egui::Context) -> Value {
     })
 }
 
+/// [`DockStyle::min_tab_width`] wider than any tab name (the largest value the dock accepts): the
+/// dock then keeps every shown tab at the width of its name and moves the rest to the overflow
+/// menu, where it would shorten them.
+const WHOLE_TAB_NAMES: f32 = 4096.0;
+
 fn dock_style(ui: &egui::Ui, language: &str) -> craft_ui::docking::DockStyle {
     let t = crate::theme::Tokens::get(ui.ctx());
     let mut style = craft_ui::docking::DockStyle::from_ui(ui);
+    // A tab is never narrower than its name (no name cut with "…"): the tabs that do not fit
+    // beside the active one go to the group's "…" menu, which lists them by their full names.
+    style.min_tab_width = WHOLE_TAB_NAMES;
     style.tab_height = 27.0;
     style.background = t.panel;
     style.tab_background = t.tab_strip;

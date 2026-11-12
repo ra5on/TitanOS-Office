@@ -469,6 +469,33 @@ const DE: &[(&str, &str)] = &[
     ("Undo", "Rückgängig"),
     ("Redo", "Wiederholen"),
     ("Version", "Version"),
+    // Edit window outside the menus (TitanOS-Office): panel names and headers, counters, rulers,
+    // the status line. The edit modes (Shuffle, Spot, Slip, Grid) and "Nudge" keep their names.
+    // The tab of the narrow track list: one word, so the name is never cut ("SPUREN" and
+    // "GRUPPEN" head the two lists inside).
+    ("Tracks and Groups", "Spuren"),
+    ("TRACKS", "SPUREN"),
+    ("GROUPS", "GRUPPEN"),
+    ("<ALL>", "<ALLE>"),
+    ("Find clips", "Clips suchen"),
+    ("MIDI EDITOR", "MIDI-EDITOR"),
+    ("MEMORY LOCATIONS", "SPEICHERPOSITIONEN"),
+    ("UNDO HISTORY", "RÜCKGÄNGIG-VERLAUF"),
+    ("Views", "Spalten"),
+    ("End", "Ende"),
+    ("Length", "Länge"),
+    ("Grid", "Raster"),
+    ("Key", "Tonart"),
+    ("Chords", "Akkorde"),
+    ("tracks", "Spuren"),
+    ("16-bit", "16 Bit"),
+    ("24-bit", "24 Bit"),
+    ("32-bit float", "32 Bit Gleitkomma"),
+    ("saved", "gespeichert"),
+    ("modified", "geändert"),
+    ("audio on", "Audio an"),
+    ("silent clock", "stille Uhr"),
+    ("no audio engine", "keine Audio-Engine"),
 ];
 
 #[cfg(test)]

@@ -193,7 +193,8 @@ pub fn show(app: &mut EffectcraftApp, ui: &mut egui::Ui, rect: Rect) {
 
 fn section_header(app: &mut EffectcraftApp, p: &egui::Painter, x0: f32, w: f32, y: f32, title: &str, auto: &str) {
     let t = app.tokens;
-    p.text(pos2(x0, y + ROW_H / 2.0), Align2::LEFT_CENTER, title, Tokens::semibold(12.0), t.text);
+    // Drawn in the interface language; the automation label keeps the English name.
+    p.text(pos2(x0, y + ROW_H / 2.0), Align2::LEFT_CENTER, crate::i18n::tr(title), Tokens::semibold(12.0), t.text);
     let r = Rect::from_min_size(pos2(x0, y), vec2(w, ROW_H));
     app.auto.add(auto, r, title);
 }
@@ -262,7 +263,8 @@ fn transform_row(app: &mut EffectcraftApp, ui: &mut egui::Ui, p: &egui::Painter,
             actions.push(("prop.toggleAnimation".into(), json!({"layer": lid, "prop": uid, "selected": true})));
         }
     }
-    p.text(pos2(r.min.x + 42.0, cy), Align2::LEFT_CENTER, &pr.name, Tokens::ui(12.0), t.text);
+    // The transform properties' names in the interface language (the engine keeps them English).
+    p.text(pos2(r.min.x + 42.0, cy), Align2::LEFT_CENTER, crate::i18n::tr(&pr.name), Tokens::ui(12.0), t.text);
     let vx = r.min.x + (r.width() * 0.5).max(130.0);
     let label = Rect::from_min_max(pos2(r.min.x + 42.0, r.min.y), pos2(vx - 20.0, r.max.y));
     let resp = ui.interact(label, egui::Id::unique(("props-label", uid)), Sense::click());
@@ -475,7 +477,7 @@ fn text_section(
         if crate::widgets::color_popup(ui, pop, sw.left_bottom(), &mut rgb) {
             set(actions, json!({key: [rgb[0], rgb[1], rgb[2]], "merge": format!("props-text-{key}")}));
         }
-        p.text(pos2(sw.max.x + 8.0, sw.center().y), Align2::LEFT_CENTER, label, Tokens::ui(12.0), t.text);
+        p.text(pos2(sw.max.x + 8.0, sw.center().y), Align2::LEFT_CENTER, crate::i18n::tr(label), Tokens::ui(12.0), t.text);
     }
     y += 52.0;
     y = more_button(app, ui, p, x0, y, "props-text-more", "properties.text.more", PanelKind::Character);

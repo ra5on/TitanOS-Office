@@ -29,6 +29,14 @@ fn ruler_label(id: &str) -> &'static str {
     }
 }
 
+/// A ruler's name as drawn: in the interface language, except the names of the time formats
+/// (Bars|Beats, Min:Secs, Timecode, Feet+Frames, Samples), which stay as the session files and
+/// the counters write them.
+fn shown_ruler_label(id: &str) -> &'static str {
+    let name = ruler_label(id);
+    if matches!(id, "bars_beats" | "min_secs" | "timecode" | "timecode2" | "feet_frames" | "samples") { name } else { crate::i18n::tr(name) }
+}
+
 pub fn ruler_height(id: &str) -> f32 {
     if id == "tempo_editor" { 56.0 } else { RULER_H }
 }
@@ -99,7 +107,7 @@ pub(super) fn draw_rulers(app: &mut SoundApp, ui: &mut Ui, area: Rect, tl: Rect,
         let lab = Rect::from_min_max(pos2(area.min.x, y0), pos2(area.min.x + HEADER_W, y0 + h));
         y0 += h;
         let painter = ui.painter().with_clip_rect(row);
-        ui.painter().text(pos2(lab.max.x - 12.0, lab.center().y), Align2::RIGHT_CENTER, ruler_label(id), bold(11.0), t.ruler_text);
+        ui.painter().text(pos2(lab.max.x - 12.0, lab.center().y), Align2::RIGHT_CENTER, shown_ruler_label(id), bold(11.0), t.ruler_text);
         let fmt = TimeFormat::from_id(id);
         match id.as_str() {
             "tempo" => {
@@ -381,9 +389,13 @@ pub(super) fn column_titles(ui: &Ui, rulers: Rect, cols: &[Column]) {
 
 /// The Edit window view selector: which columns sit beside the track headers.
 pub(super) fn views_button(app: &mut SoundApp, ui: &mut Ui, rulers: Rect) {
-    let r = Rect::from_min_size(rulers.min + vec2(6.0, 5.0), vec2(50.0, 18.0));
+    // "Views" in the interface language; a longer word widens the box by its extra letters (it
+    // ends before the ruler names, which are right-aligned in the same column).
+    let views = crate::i18n::tr("Views");
+    let extra = views.chars().count().saturating_sub(5).min(4) as f32 * 5.0;
+    let r = Rect::from_min_size(rulers.min + vec2(6.0, 5.0), vec2(50.0 + extra, 18.0));
     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r));
-    let resp = crate::widgets::selector_box(&mut child, r.width(), r.height(), "Views", Tokens::current().text);
+    let resp = crate::widgets::selector_box(&mut child, r.width(), r.height(), views, Tokens::current().text);
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, child.is_enabled(), "Views"));
     let resp = resp.on_hover_text("Columns beside the track headers: inserts, sends, I/O…");
     egui::Popup::menu(&resp).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {

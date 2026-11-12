@@ -608,10 +608,18 @@ fn path_id(path: &[bool]) -> String {
     path.iter().map(|second| if *second { 'b' } else { 'a' }).collect()
 }
 
+/// [`DockStyle::min_tab_width`] wider than any tab name (the largest value the dock accepts): the
+/// dock then keeps every shown tab at the width of its name and moves the rest to the overflow
+/// menu, where it would shorten them.
+const WHOLE_TAB_NAMES: f32 = 4096.0;
+
 /// After Effects' window is all frames: drops on all four window edges, Ctrl/Cmd-drag undocks,
 /// a release over no target floats, and a floating window's title bar only moves it.
 fn dock_style(ui: &egui::Ui, t: &Tokens) -> DockStyle {
     let mut style = DockStyle::from_ui(ui);
+    // A tab is never narrower than its name (no name cut with "…"): the tabs that do not fit
+    // beside the active one go to the group's "…" menu, which lists them by their full names.
+    style.min_tab_width = WHOLE_TAB_NAMES;
     style.side_edge_zones = true;
     style.new_dock_zones = false;
     style.maximize_item = true;

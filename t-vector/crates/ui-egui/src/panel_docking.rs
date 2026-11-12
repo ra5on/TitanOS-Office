@@ -1291,10 +1291,18 @@ fn keep_field_ending_keys(ui: &egui::Ui) {
     ui.input_mut(|i| i.events.retain(|e| !matches!(e, egui::Event::Key { key: egui::Key::Enter | egui::Key::Escape, pressed: true, .. })));
 }
 
+/// [`DockStyle::min_tab_width`] wider than any tab name (the largest value the dock accepts): the
+/// dock then keeps every shown tab at the width of its name and moves the rest to the overflow
+/// menu, where it would shorten them.
+const WHOLE_TAB_NAMES: f32 = 4096.0;
+
 /// T-Vector's look and wording of craft-ui's docking.
 fn dock_style(ui: &egui::Ui) -> craft_ui::docking::DockStyle {
     let t = crate::theme::Tokens::get(ui.ctx());
     let mut style = craft_ui::docking::DockStyle::from_ui(ui);
+    // A tab is never narrower than its name (no name cut with "…"): the tabs that do not fit
+    // beside the active one go to the group's "…" menu, which lists them by their full names.
+    style.min_tab_width = WHOLE_TAB_NAMES;
     style.tab_height = 33.0;
     style.background = t.panel;
     style.tab_background = t.tab_strip;
