@@ -1389,6 +1389,18 @@ const GERMAN: &[(&str, &str)] = &[
     ("Frames per second", "Frames pro Sekunde"),
     ("Save project as:", "Projekt speichern unter:"),
     ("{} already exists. Replace it?", "{} ist bereits vorhanden. Ersetzen?"),
+    // Properties panel (TitanOS-Office): section titles and the names of the transform properties.
+    ("Text", "Text"),
+    ("Paragraph", "Absatz"),
+    ("Fill", "Fläche"),
+    ("Stroke", "Kontur"),
+    ("Position", "Position"),
+    ("Scale", "Skalierung"),
+    ("Rotation", "Drehung"),
+    ("X Rotation", "X-Drehung"),
+    ("Y Rotation", "Y-Drehung"),
+    ("Z Rotation", "Z-Drehung"),
+    ("Opacity", "Deckkraft"),
 ];
 
 const JAPANESE: &[(&str, &str)] = &[
