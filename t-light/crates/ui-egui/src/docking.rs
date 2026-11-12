@@ -339,6 +339,10 @@ fn command_impl(app: &mut crate::LightcraftApp, reset: bool, params: &Value, ren
     Ok(json!({"docking": app.ui.docking}))
 }
 
+/// [`DockStyle::min_tab_width`] wider than any tab name: the dock then keeps every shown tab at
+/// the width of its name and moves the rest to the overflow menu, where it would shorten them.
+const WHOLE_TAB_NAMES: f32 = 100_000.0;
+
 /// Draw the docked workspace: restore or fall back from an invalid layout, sync panel
 /// visibility, render the panels and the current view in the canvas, then apply the docking
 /// actions. If the layout changed during the pass, any in-flight dock drag is cancelled and the
@@ -356,6 +360,9 @@ pub fn show(app: &mut crate::LightcraftApp, ui: &mut egui::Ui) {
     // Tool/Canvas callbacks dispatch app commands and must see the real workspace.
     app.ui.docking = Some(workspace.clone());
     let mut style = DockStyle::from_ui(ui);
+    // A tab is never narrower than its name (no name cut with "…"): the tabs that do not fit
+    // beside the active one go to the group's "…" menu, which lists them by their full names.
+    style.min_tab_width = WHOLE_TAB_NAMES;
     style.min_pane = 96.0;
     // Free docking: a panel dropped at an empty window edge makes a dock, and the photo takes
     // drops on all four sides.

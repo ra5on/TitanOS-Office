@@ -442,6 +442,10 @@ pub(crate) fn arrange(app: &mut crate::SoundApp) -> Result<(), String> {
     Ok(())
 }
 
+/// [`DockStyle::min_tab_width`] wider than any tab name: the dock then keeps every shown tab at
+/// the width of its name and moves the rest to the overflow menu, where it would shorten them.
+const WHOLE_TAB_NAMES: f32 = 100_000.0;
+
 /// Draw and edit the dock layout for the requested window, falling back to the default layout if validation or panel
 /// sync fails, then publish panel visibility, store the workspace and apply the frame's layout actions.
 pub fn show(app: &mut crate::SoundApp, ui: &mut egui::Ui, window: crate::MainWindow) {
@@ -458,6 +462,9 @@ pub fn show(app: &mut crate::SoundApp, ui: &mut egui::Ui, window: crate::MainWin
     }
     cancel_replaced_workspace(app, &before_sync, &workspace, edit);
     let mut style = DockStyle::from_ui(ui);
+    // A tab is never narrower than its name (no name cut with "…"): the tabs that do not fit
+    // beside the active one go to the group's "…" menu, which lists them by their full names.
+    style.min_tab_width = WHOLE_TAB_NAMES;
     style.min_pane = 96.0;
     style.tab_height = MIDI_TAB_HEIGHT;
     style.background = t.panel_bg;
@@ -476,7 +483,7 @@ pub fn show(app: &mut crate::SoundApp, ui: &mut egui::Ui, window: crate::MainWin
         ui,
         &workspace.layout,
         &style,
-        |panel| panel.label().into(),
+        |panel| crate::i18n::tr(panel.label()).into(),
         permissions,
         panel_limits,
         |ui, panel| match panel {
