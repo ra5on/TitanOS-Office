@@ -382,7 +382,7 @@ fn style(ui: &Ui, t: &Tokens) -> DockStyle {
     s.font = egui::FontId::proportional(12.5);
     // A tab is never narrower than its name (no name cut with "…"): the tabs that do not fit
     // beside the active one go to the group's "…" menu, which lists them by their full names.
-    s.min_tab_width = 100_000.0;
+    s.min_tab_width = 4096.0;
     s.tab_height = 30.0;
     // Panels arrange in a split tree around the viewport; floating title bars only move windows.
     s.new_dock_zones = false;

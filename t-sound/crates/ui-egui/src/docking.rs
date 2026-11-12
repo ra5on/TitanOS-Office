@@ -442,9 +442,10 @@ pub(crate) fn arrange(app: &mut crate::SoundApp) -> Result<(), String> {
     Ok(())
 }
 
-/// [`DockStyle::min_tab_width`] wider than any tab name: the dock then keeps every shown tab at
-/// the width of its name and moves the rest to the overflow menu, where it would shorten them.
-const WHOLE_TAB_NAMES: f32 = 100_000.0;
+/// [`DockStyle::min_tab_width`] wider than any tab name (the largest value the dock accepts): the
+/// dock then keeps every shown tab at the width of its name and moves the rest to the overflow
+/// menu, where it would shorten them.
+const WHOLE_TAB_NAMES: f32 = 4096.0;
 
 /// Draw and edit the dock layout for the requested window, falling back to the default layout if validation or panel
 /// sync fails, then publish panel visibility, store the workspace and apply the frame's layout actions.

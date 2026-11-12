@@ -339,9 +339,10 @@ fn command_impl(app: &mut crate::LightcraftApp, reset: bool, params: &Value, ren
     Ok(json!({"docking": app.ui.docking}))
 }
 
-/// [`DockStyle::min_tab_width`] wider than any tab name: the dock then keeps every shown tab at
-/// the width of its name and moves the rest to the overflow menu, where it would shorten them.
-const WHOLE_TAB_NAMES: f32 = 100_000.0;
+/// [`DockStyle::min_tab_width`] wider than any tab name (the largest value the dock accepts): the
+/// dock then keeps every shown tab at the width of its name and moves the rest to the overflow
+/// menu, where it would shorten them.
+const WHOLE_TAB_NAMES: f32 = 4096.0;
 
 /// Draw the docked workspace: restore or fall back from an invalid layout, sync panel
 /// visibility, render the panels and the current view in the canvas, then apply the docking

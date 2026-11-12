@@ -310,9 +310,10 @@ pub fn command(app: &mut crate::CadApp, reset: bool, params: &Value) -> Result<V
     Ok(json!({"docking": app.ui.docking}))
 }
 
-/// [`DockStyle::min_tab_width`] wider than any tab name: the dock then keeps every shown tab at
-/// the width of its name and moves the rest to the overflow menu, where it would shorten them.
-const WHOLE_TAB_NAMES: f32 = 100_000.0;
+/// [`DockStyle::min_tab_width`] wider than any tab name (the largest value the dock accepts): the
+/// dock then keeps every shown tab at the width of its name and moves the rest to the overflow
+/// menu, where it would shorten them.
+const WHOLE_TAB_NAMES: f32 = 4096.0;
 
 /// Validate and repair the stored workspace, sync it with the app, and render the dock panels; a failed restore falls back to the default layout with a status message.
 pub fn show(app: &mut crate::CadApp, ui: &mut egui::Ui) {

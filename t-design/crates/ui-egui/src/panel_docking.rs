@@ -1126,9 +1126,10 @@ pub(crate) fn inspect(app: &DesignApp, ctx: &egui::Context) -> Value {
     })
 }
 
-/// [`DockStyle::min_tab_width`] wider than any tab name: the dock then keeps every shown tab at
-/// the width of its name and moves the rest to the overflow menu, where it would shorten them.
-const WHOLE_TAB_NAMES: f32 = 100_000.0;
+/// [`DockStyle::min_tab_width`] wider than any tab name (the largest value the dock accepts): the
+/// dock then keeps every shown tab at the width of its name and moves the rest to the overflow
+/// menu, where it would shorten them.
+const WHOLE_TAB_NAMES: f32 = 4096.0;
 
 fn dock_style(ui: &egui::Ui, language: &str) -> craft_ui::docking::DockStyle {
     let t = crate::theme::Tokens::get(ui.ctx());

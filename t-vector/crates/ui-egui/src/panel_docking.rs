@@ -1291,9 +1291,10 @@ fn keep_field_ending_keys(ui: &egui::Ui) {
     ui.input_mut(|i| i.events.retain(|e| !matches!(e, egui::Event::Key { key: egui::Key::Enter | egui::Key::Escape, pressed: true, .. })));
 }
 
-/// [`DockStyle::min_tab_width`] wider than any tab name: the dock then keeps every shown tab at
-/// the width of its name and moves the rest to the overflow menu, where it would shorten them.
-const WHOLE_TAB_NAMES: f32 = 100_000.0;
+/// [`DockStyle::min_tab_width`] wider than any tab name (the largest value the dock accepts): the
+/// dock then keeps every shown tab at the width of its name and moves the rest to the overflow
+/// menu, where it would shorten them.
+const WHOLE_TAB_NAMES: f32 = 4096.0;
 
 /// T-Vector's look and wording of craft-ui's docking.
 fn dock_style(ui: &egui::Ui) -> craft_ui::docking::DockStyle {
