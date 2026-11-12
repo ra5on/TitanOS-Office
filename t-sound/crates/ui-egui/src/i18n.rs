@@ -471,7 +471,9 @@ const DE: &[(&str, &str)] = &[
     ("Version", "Version"),
     // Edit window outside the menus (TitanOS-Office): panel names and headers, counters, rulers,
     // the status line. The edit modes (Shuffle, Spot, Slip, Grid) and "Nudge" keep their names.
-    ("Tracks and Groups", "Spuren und Gruppen"),
+    // The tab of the narrow track list: one word, so the name is never cut ("SPUREN" and
+    // "GRUPPEN" head the two lists inside).
+    ("Tracks and Groups", "Spuren"),
     ("TRACKS", "SPUREN"),
     ("GROUPS", "GRUPPEN"),
     ("<ALL>", "<ALLE>"),
