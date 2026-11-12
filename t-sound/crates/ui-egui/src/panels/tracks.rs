@@ -112,7 +112,7 @@ pub fn tracks_and_groups(app: &mut SoundApp, ui: &mut Ui) {
     let groups_area = with_pending_offset(egui::ScrollArea::vertical().id_salt("groups_scroll"), ui, "groups_scroll");
     let out = groups_area.auto_shrink([false, false]).scroll_bar_visibility(hidden).show(ui, |ui| {
         let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 17.0), Sense::hover());
-        ui.painter().text(pos2(r.min.x + 30.0, r.center().y), Align2::LEFT_CENTER, "<ALL>", regular(11.5).clone(), t.text);
+        ui.painter().text(pos2(r.min.x + 30.0, r.center().y), Align2::LEFT_CENTER, crate::i18n::tr("<ALL>"), regular(11.5).clone(), t.text);
         let all = ui.interact(r, ui.scope_id().with("group_all"), Sense::click());
         all.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, "<ALL>"));
         if all.double_clicked() {

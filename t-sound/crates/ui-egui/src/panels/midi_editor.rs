@@ -122,7 +122,7 @@ pub fn show(app: &mut SoundApp, ui: &mut Ui) {
     ui.painter().rect_filled(full, 0.0, t.panel_bg);
     let header = Rect::from_min_size(full.min, vec2(full.width(), 22.0));
     ui.painter().rect_filled(header, 0.0, t.panel_bg2);
-    ui.painter().text(pos2(header.min.x + 8.0, header.center().y), Align2::LEFT_CENTER, "MIDI EDITOR", bold(11.5), t.header_text);
+    ui.painter().text(pos2(header.min.x + 8.0, header.center().y), Align2::LEFT_CENTER, crate::i18n::tr("MIDI EDITOR"), bold(11.5), t.header_text);
     let Some(cid) = target_clip(app) else {
         empty_state(app, ui, full, header);
         return;

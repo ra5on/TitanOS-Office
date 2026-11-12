@@ -34,7 +34,7 @@ pub fn clip_list(app: &mut SoundApp, ui: &mut Ui) {
     panel_header(ui, "CLIPS");
     let fkey = egui::Id::unique("clip_filter");
     let mut filter: String = ui.ctx().memory(|m| m.data.get_temp(fkey)).unwrap_or_default();
-    ui.add(egui::TextEdit::singleline(&mut filter).hint_text("🔍 Find clips").desired_width(f32::INFINITY));
+    ui.add(egui::TextEdit::singleline(&mut filter).hint_text(format!("🔍 {}", crate::i18n::tr("Find clips"))).desired_width(f32::INFINITY));
     ui.ctx().memory_mut(|m| m.data.insert_temp(fkey, filter.clone()));
     let needle = filter.to_lowercase();
     let rkey = egui::Id::unique("clip_rows");

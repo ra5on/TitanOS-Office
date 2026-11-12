@@ -268,7 +268,7 @@ fn counters(app: &mut SoundApp, ui: &mut Ui) {
     ];
     for (i, (label, val)) in rows.iter().enumerate() {
         let y = r.min.y + 10.0 + i as f32 * 13.0;
-        ui.painter().text(pos2(r.min.x + 214.0, y), Align2::RIGHT_CENTER, *label, regular(11.0), t.counter_label);
+        ui.painter().text(pos2(r.min.x + 214.0, y), Align2::RIGHT_CENTER, crate::i18n::tr(label), regular(11.0), t.counter_label);
         ui.painter().text(pos2(r.max.x - 8.0, y), Align2::RIGHT_CENTER, val, mono(11.0), t.counter_text);
     }
     // Sub counter row.
@@ -276,8 +276,8 @@ fn counters(app: &mut SoundApp, ui: &mut Ui) {
     ui.painter().line_segment([pos2(r.min.x + 6.0, r.max.y - 21.0), pos2(r.max.x - 6.0, r.max.y - 21.0)], Stroke::new(1.0, t.counter_rule));
     ui.painter().text(pos2(r.min.x + 10.0, y), Align2::LEFT_CENTER, "Sub", regular(11.0), t.counter_label);
     ui.painter().text(pos2(r.min.x + 150.0, y), Align2::RIGHT_CENTER, fmt_pos(app, pos, sub_fmt), mono(11.0), t.counter_text);
-    let st = if app.engine.is_dirty() { "modified" } else { "saved" };
-    let dev = app.player.as_ref().map_or("no audio engine", |p| if p.silent { "silent clock" } else { "audio on" });
+    let st = crate::i18n::tr(if app.engine.is_dirty() { "modified" } else { "saved" });
+    let dev = crate::i18n::tr(app.player.as_ref().map_or("no audio engine", |p| if p.silent { "silent clock" } else { "audio on" }));
     ui.painter().text(pos2(r.max.x - 8.0, y), Align2::RIGHT_CENTER, format!("{st} · {dev}"), regular(10.0), t.text_dim);
 }
 
@@ -293,7 +293,7 @@ fn grid_nudge(app: &mut SoundApp, ui: &mut Ui) {
     let gl = Rect::from_min_size(pos2(r.min.x + 6.0, r.min.y + 8.0), vec2(48.0, 16.0));
     let resp = ui.interact(gl, ui.scope_id().with("grid_lines"), Sense::click());
     key(ui.painter(), gl, &resp, if lines { t.mode_on } else { t.counter_off });
-    ui.painter().text(gl.center(), Align2::CENTER_CENTER, "Grid", bold(11.0), if lines { t.mode_on_text } else { t.mode_off_text });
+    ui.painter().text(gl.center(), Align2::CENTER_CENTER, crate::i18n::tr("Grid"), bold(11.0), if lines { t.mode_on_text } else { t.mode_off_text });
     if resp.on_hover_text("Show grid lines").clicked() {
         let _ = app.run("view.grid_lines", json!({}));
     }
@@ -613,7 +613,7 @@ fn tempo_meter(app: &mut SoundApp, ui: &mut Ui) {
         let _ = app.run("options.countoff", json!({}));
     }
     ui.painter().text(pos2(r.max.x - 8.0, co.center().y), Align2::RIGHT_CENTER, format!("{bars} bars"), mono(11.0), t.counter_text);
-    ui.painter().text(pos2(r.min.x + 70.0, r.min.y + 32.0), Align2::RIGHT_CENTER, "Meter", regular(11.0), t.counter_label);
+    ui.painter().text(pos2(r.min.x + 70.0, r.min.y + 32.0), Align2::RIGHT_CENTER, crate::i18n::tr("Meter"), regular(11.0), t.counter_label);
     ui.painter().text(pos2(r.max.x - 8.0, r.min.y + 32.0), Align2::RIGHT_CENTER, meter, mono(11.0), t.counter_text);
     ui.painter().text(pos2(r.min.x + 70.0, r.min.y + 48.0), Align2::RIGHT_CENTER, "Tempo", regular(11.0), t.counter_label);
     icons::draw(ui.painter(), Rect::from_center_size(pos2(r.min.x + 82.0, r.min.y + 48.0), vec2(13.0, 13.0)), "note", t.counter_text);
