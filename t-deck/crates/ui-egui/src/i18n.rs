@@ -272,6 +272,26 @@ const DE: &[(&str, &str)] = &[
     ("Paragraph…", "Absatz…"),
     ("Paragraph", "Absatz"),
     ("Present", "Vorführen"),
+    // Outside the ribbon (TitanOS-Office): the status bar, the notes pane and the titles of the
+    // task panes.
+    ("Slide {} of {}", "Folie {} von {}"),
+    ("Comments", "Kommentare"),
+    ("Zoom In", "Vergrößern"),
+    ("Zoom Out", "Verkleinern"),
+    ("Reading View", "Leseansicht"),
+    ("Slide Sorter", "Foliensortierung"),
+    ("Normal", "Normal"),
+    ("Click to add notes", "Klicken, um Notizen hinzuzufügen"),
+    ("Click to add text", "Klicken, um Text hinzuzufügen"),
+    ("Click to add first slide", "Klicken, um die erste Folie hinzuzufügen"),
+    ("Format Shape", "Form formatieren"),
+    ("Format Background", "Hintergrund formatieren"),
+    ("Animation Pane", "Animationsbereich"),
+    ("Selection", "Auswahl"),
+    ("Design Ideas", "Designideen"),
+    ("Text Pane", "Textbereich"),
+    ("Revisions", "Überarbeitungen"),
+    ("Pane", "Bereich"),
 ];
 
 #[cfg(test)]
