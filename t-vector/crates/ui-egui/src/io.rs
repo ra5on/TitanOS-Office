@@ -23,8 +23,8 @@ pub(crate) use export::{
 };
 pub(crate) use open::{EXPORT_PRESETS, import_presets, opened};
 pub use open::{
-    MAX_RECENT_FILES, OpensAs, ask_revert, install_module, install_plugin, new_from_template, note_recent, open_bytes, open_dialog, open_document,
-    open_path, open_reporting, opens_as, place_bytes, recent_files, report_open_error,
+    MAX_RECENT_FILES, OpensAs, ask_revert, install_module, install_plugin, new_from_template, note_recent, open_arrived, open_bytes, open_dialog,
+    open_document, open_path, open_reporting, opens_as, place_bytes, recent_files, report_open_error,
 };
 #[cfg(test)]
 pub(crate) use open::{open_file, opened_with_notes};
@@ -286,5 +286,57 @@ mod tests {
             open_bytes(&mut app, file, text.as_bytes(), None).unwrap();
         }
         assert_eq!(app.session.prefs.screen_export_presets.iter().map(|p| p.name.as_str()).collect::<Vec<_>>(), ["Pack", "Pack 2"]);
+    }
+
+    /// A web app that downloads what it saves, the downloads kept as (name, bytes).
+    fn web_app() -> (VectorcraftApp, Written) {
+        let saved = Written::default();
+        let kept = saved.clone();
+        let download: crate::DownloadFn = Box::new(move |name: &str, bytes: &[u8]| {
+            kept.borrow_mut().push((name.to_string(), bytes.to_vec()));
+            Ok(())
+        });
+        (VectorcraftApp::new(Session::new(), Services { download: Some(download), ..Default::default() }), saved)
+    }
+
+    const LOGO: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="80"><rect x="10" y="10" width="30" height="20" fill="#e05"/></svg>"##;
+
+    /// PLAN 80-3: an `.svg` the page hands over (TitanOS's openFile, the file picker) saves back
+    /// as SVG under its own name without asking for a name and a format; Save As still asks.
+    #[test]
+    fn a_handed_over_svg_saves_back_to_itself() {
+        let (mut app, saved) = web_app();
+        open_arrived(&mut app, "logo.svg", LOGO.as_bytes()).unwrap();
+        app.run("shape.rectangle", json!({"x": 50, "y": 40, "width": 20, "height": 10})).unwrap();
+        let r = app.run("file.save", json!({})).unwrap();
+        assert!(app.ui.dialog.is_none(), "Save asked: {r}");
+        {
+            let saved = saved.borrow();
+            assert_eq!(saved.iter().map(|(name, _)| name.as_str()).collect::<Vec<_>>(), ["logo.svg"]);
+            assert!(String::from_utf8_lossy(&saved[0].1).contains("<svg"), "written as SVG");
+        }
+        assert!(!app.session.doc().unwrap().is_dirty());
+        assert_eq!(app.session.doc().unwrap().format, "svg");
+        // Save As asks for the name and the format.
+        let r = app.run("file.saveAs", json!({})).unwrap();
+        assert_eq!(r["pending"], dialogs::save_options::KIND);
+        assert_eq!(saved.borrow().len(), 1);
+    }
+
+    /// A handed-over file in a format Save doesn't write, or a template, still asks where and how
+    /// to save; so does a PDF (Import PDF may read it again by its path).
+    #[test]
+    fn other_handed_over_files_still_ask_on_save() {
+        let (mut app, _) = web_app();
+        app.run("file.new", json!({"width": 3, "height": 2})).unwrap();
+        let png = bytes_of(&mut app, "document.serialize", json!({"format": "png"}));
+        let pdf = bytes_of(&mut app, "document.serialize", json!({"format": "pdf"}));
+        for (name, bytes) in [("tiny.png", png.clone()), ("brochure.ait", pdf.clone()), ("flyer.pdf", pdf)] {
+            open_arrived(&mut app, name, &bytes).unwrap();
+            assert_eq!(app.session.doc().unwrap().path, None, "{name}");
+            let r = app.run("file.save", json!({})).unwrap();
+            assert_eq!(r["pending"], dialogs::save_options::KIND, "{name}");
+            app.ui.dialog = None;
+        }
     }
 }
