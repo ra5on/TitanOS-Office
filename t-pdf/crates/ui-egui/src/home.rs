@@ -53,17 +53,25 @@ fn card_height(title: &egui::Galley, blurb: &egui::Galley) -> f32 {
 
 /// The height every card of a row of tools `ids` gets: the tallest one's.
 fn cards_height(ui: &egui::Ui, t: &Tokens, ids: impl Iterator<Item = &'static str>, allow_unpin: bool) -> f32 {
-    ids.filter_map(catalog::group).map(|g| {
-        let (title, blurb) = card_text(ui, t, g, allow_unpin);
-        card_height(&title, &blurb)
-    })
-    .fold(CARD_MIN_HEIGHT, f32::max)
+    ids.filter_map(catalog::group)
+        .map(|g| {
+            let (title, blurb) = card_text(ui, t, g, allow_unpin);
+            card_height(&title, &blurb)
+        })
+        .fold(CARD_MIN_HEIGHT, f32::max)
 }
 
 /// Render a single tool card `height` tall with the standard lift, styling, icon, title,
 /// description, and action. If `allow_unpin` is true, an unpin button is always accessible in the
 /// top right corner.
-fn tool_card(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static catalog::ToolGroup, allow_unpin: bool, height: f32) -> Option<&'static str> {
+fn tool_card(
+    app: &mut PdfCraftApp,
+    ui: &mut egui::Ui,
+    t: &Tokens,
+    g: &'static catalog::ToolGroup,
+    allow_unpin: bool,
+    height: f32,
+) -> Option<&'static str> {
     let (title, blurb) = card_text(ui, t, g, allow_unpin);
     let (title_top, blurb_top) = card_layout(&title);
     let (rect, resp) = ui.allocate_exact_size(vec2(CARD_WIDTH, height), Sense::click());

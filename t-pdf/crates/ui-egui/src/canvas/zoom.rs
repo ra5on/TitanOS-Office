@@ -1,5 +1,8 @@
 use super::{DocInfo, DocView, Fit, GAP, MARGIN, PT, PageLayout, Pos2, Rect, SIDE, SavedDisplay, Vec2, device_pixels, pos2, vec2};
 
+/// How much further a double tap zooms in from fitting the width.
+pub(crate) const DOUBLE_TAP_ZOOM: f32 = 2.0;
+
 /// The page grid's zoom range and the step of its buttons and keys.
 pub const GRID_ZOOM_RANGE: std::ops::RangeInclusive<f32> = 0.5..=3.0;
 
@@ -107,6 +110,12 @@ impl DocView {
         if self.show_page_gaps { GAP } else { 0.0 }
     }
 
+    /// The gutter left and right of the pages: room for the floating quick bar, or a thin edge in
+    /// the narrow layout, which has no quick bar and needs the width for the page.
+    pub(super) fn side(&self) -> f32 {
+        if self.narrow { crate::compact::GUTTER } else { SIDE }
+    }
+
     /// Turn continuous scrolling on or off, keeping the current page in view. A no-op when it is
     /// already in that state.
     pub fn set_continuous(&mut self, continuous: bool) {
@@ -198,6 +207,31 @@ impl DocView {
         }
     }
 
+    /// The zoom that fits the width, whatever the zoom mode is now.
+    fn width_fit_zoom(&mut self, info: &DocInfo) -> f32 {
+        let (fit, zoom) = (self.fit, self.zoom);
+        self.fit = Fit::Width;
+        self.fit_zoom(info);
+        let fitted = self.zoom;
+        (self.fit, self.zoom) = (fit, zoom);
+        fitted
+    }
+
+    /// A finger's double tap at `at` (screen), if there was one, as on a phone: at the width or
+    /// smaller, zoom in [`DOUBLE_TAP_ZOOM`] times as far about the tap; zoomed in, back to fitting
+    /// the width, about the tap too, and fitting it from then on.
+    pub(crate) fn double_tap_zoom(&mut self, ui: &egui::Ui, info: &DocInfo, at: Option<Pos2>) {
+        let Some(at) = at else { return };
+        ui.ctx().request_repaint();
+        let fitted = self.width_fit_zoom(info);
+        if self.zoom <= fitted * 1.05 {
+            self.zoom_at(fitted * DOUBLE_TAP_ZOOM, at);
+        } else {
+            self.zoom_at(fitted, at);
+            self.fit = Fit::Width;
+        }
+    }
+
     /// Zoom keeping the centre of the view still.
     pub fn set_zoom(&mut self, zoom: f32) {
         // CLI/view options can set zoom before the first layout. Rect::NOTHING has no
@@ -277,7 +311,7 @@ impl DocView {
         } else {
             (max_w, largest(|s| s.1))
         };
-        let avail_w = (self.viewport_w - 2.0 * SIDE).max(100.0);
+        let avail_w = (self.viewport_w - 2.0 * self.side()).max(100.0);
         let per_row = if self.layout == PageLayout::TwoUp { 2.0 } else { 1.0 };
         match self.fit {
             Fit::Width => self.zoom = (avail_w - self.page_gap() * (per_row - 1.0)) / (w * PT * per_row),
@@ -299,13 +333,14 @@ impl DocView {
         let shown = info.pages.iter().enumerate().filter(|&(i, _)| single.is_none_or(|c| c == i));
         let max_w = shown.map(|(_, p)| self.display_size(p).0).fold(0.0, f32::max);
         let per_row = if self.layout == PageLayout::TwoUp { 2.0 } else { 1.0 };
-        (max_w * self.zoom * PT * per_row + 2.0 * SIDE).max(avail_w)
+        (max_w * self.zoom * PT * per_row + 2.0 * self.side()).max(avail_w)
     }
 
     /// Page rects in content coordinates (origin at the scroll content's top-left).
     pub(super) fn layout(&self, info: &DocInfo, content_w: f32, ppp: f32) -> Vec<Rect> {
         let s = self.zoom * PT;
         let gap = self.page_gap();
+        let side = self.side();
         let page_size = |p: &pdfcraft_render::PageInfo| {
             let (w, h) = self.display_size(p);
             if self.show_page_gaps {
@@ -322,7 +357,7 @@ impl DocView {
             PageLayout::Single => {
                 for p in &info.pages {
                     let size = page_size(p);
-                    rects.push(Rect::from_min_size(pos2(((content_w - size.x) / 2.0).max(SIDE), y), size));
+                    rects.push(Rect::from_min_size(pos2(((content_w - size.x) / 2.0).max(side), y), size));
                     y += size.y + gap;
                 }
             }
@@ -337,7 +372,7 @@ impl DocView {
                     let sizes: Vec<Vec2> = pair.iter().map(page_size).collect();
                     let row_w: f32 = sizes.iter().map(|v| v.x).sum::<f32>() + gap * (sizes.len() as f32 - 1.0);
                     let row_h = sizes.iter().map(|v| v.y).fold(0.0, f32::max);
-                    let mut x = if self.cover && ri == 0 { (content_w / 2.0 + gap / 2.0).max(SIDE) } else { ((content_w - row_w) / 2.0).max(SIDE) };
+                    let mut x = if self.cover && ri == 0 { (content_w / 2.0 + gap / 2.0).max(side) } else { ((content_w - row_w) / 2.0).max(side) };
                     for size in sizes {
                         rects.push(Rect::from_min_size(pos2(x, y + (row_h - size.y) / 2.0), size));
                         x += size.x + gap;

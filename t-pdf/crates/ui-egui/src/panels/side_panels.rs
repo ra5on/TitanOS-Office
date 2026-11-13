@@ -415,10 +415,45 @@ fn keep_resize_edges_off_scrollbars(ui: &mut egui::Ui, host: egui::Id, open: &[P
     }
 }
 
-/// Draws the rail and the open panes. Call after the top bars and before the central panel.
+/// The narrow layout ([`crate::compact`]): which pane covers the page. A pane the user chooses
+/// covers it ([`PdfCraftApp::reveal_tools`] and [`PdfCraftApp::choose_right_panel`] say so, and so
+/// does the Tools pane opening any other way); its own Close, or leaving the narrow layout,
+/// uncovers it. A side panel the app opens by itself (a document's bookmarks when it opens) waits
+/// until it is chosen, so a document always opens on its page. Call after the top bars.
+pub fn follow_compact(app: &mut PdfCraftApp) {
+    let tools = app.left_open && app.mode != Mode::Read;
+    if app.compact {
+        if tools && app.compact_tools_seen == Some(false) {
+            app.compact_pane = Some(Pane::Tools);
+        }
+        let still_open = match app.compact_pane {
+            Some(Pane::Tools) => tools,
+            Some(Pane::Side) => app.active.is_some() && app.right.is_some(),
+            None => true,
+        };
+        if !still_open {
+            app.compact_pane = None;
+        }
+    } else {
+        app.compact_pane = None;
+    }
+    app.compact_tools_seen = Some(tools);
+}
+
+/// The narrow layout's pane, in all the room the page has ([`follow_compact`]), with the panel's
+/// own header and Close as beside the page.
+pub fn compact_pane(app: &mut PdfCraftApp, ui: &mut egui::Ui, pane: Pane) {
+    Content { app }.body(ui, &pane);
+}
+
+/// Draws the rail and the open panes. Call after the top bars and before the central panel. The
+/// narrow layout has neither beside the page ([`follow_compact`], [`crate::chrome::compact_nav`]).
 pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     if let Some(panel) = app.right {
         app.last_right = panel;
+    }
+    if app.compact {
+        return;
     }
     // The rail first: it is the outermost panel on the right.
     if app.active.is_some() {

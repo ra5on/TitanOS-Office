@@ -25,20 +25,21 @@ pub(super) fn edit_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g
     let mut tool = None;
     // Back to All tools only when Edit was opened from there; the Edit tab is its own way back.
     let from_all_tools = app.mode != crate::Mode::Edit;
+    let button = crate::compact::pane_button(ui.ctx());
     ui.horizontal(|ui| {
-        if from_all_tools && icons::button(ui, "chevron-left", 26.0, false, tl!("Back to all tools")).clicked() {
+        if from_all_tools && icons::button(ui, "chevron-left", button, false, tl!("Back to all tools")).clicked() {
             app.left = LeftPanel::AllTools;
             app.enter_mode(crate::Mode::AllTools);
         }
         // "Edit" under the Edit tab, as Acrobat titles it; the tool's own name from All tools.
         let title = if from_all_tools { tl!(g.label) } else { tl!("Edit") };
-        let title_width = (ui.available_width() - 2.0 * (26.0 + ui.spacing().item_spacing.x)).max(1.0);
+        let title_width = (ui.available_width() - 2.0 * (button + ui.spacing().item_spacing.x)).max(1.0);
         ui.add_sized([title_width, 26.0], egui::Label::new(egui::RichText::new(title).font(theme::semibold(15.5)).color(t.text)).truncate())
             .on_hover_text(title);
-        if icons::button(ui, "settings", 26.0, false, tl!("Preferences")).clicked() {
+        if icons::button(ui, "settings", button, false, tl!("Preferences")).clicked() {
             run = Some("app.preferences");
         }
-        if icons::button(ui, "x", 26.0, false, tl!("Close panel")).clicked() {
+        if icons::button(ui, "x", button, false, tl!("Close panel")).clicked() {
             app.left_open = false;
         }
     });

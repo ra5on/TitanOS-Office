@@ -3760,16 +3760,24 @@ fn hotbar_settings_menu_closes_on_click_outside() {
 
 #[test]
 fn hotbar_picker_in_narrow_viewport_fits_within_screen_width() {
-    let mut h = Harness::builder().with_size(egui::vec2(270.0, 480.0)).build_eframe(|_cc| {
-        let mut app = PdfCraftApp::new();
-        app.set_option("language", "en").unwrap();
-        app.open_bytes("text.pdf", None, TEXT_FIXTURE.to_vec()).expect("opens");
-        app
-    });
+    let window = |width: f32| {
+        Harness::builder().with_size(egui::vec2(width, 480.0)).build_eframe(|_cc| {
+            let mut app = PdfCraftApp::new();
+            app.set_option("language", "en").unwrap();
+            app.open_bytes("text.pdf", None, TEXT_FIXTURE.to_vec()).expect("opens");
+            app
+        })
+    };
+    // Narrower, the window has the phone layout, where the quick tools are in the Tools pane.
+    let width = pdfcraft_ui_egui::compact::MAX_WIDTH;
+    let mut h = window(width);
     h.get_by_label("Hotbar settings").click();
     h.run_steps(5);
     let close_btn = h.get_by_label("Close menu");
-    assert!(close_btn.rect().max.x <= 270.0, "Close menu button must stay within viewport width: {:?}", close_btn.rect());
+    assert!(close_btn.rect().max.x <= width, "Close menu button must stay within viewport width: {:?}", close_btn.rect());
+    let mut h = window(270.0);
+    h.run_steps(5);
+    assert!(h.query_by_label("Hotbar settings").is_none(), "no quick bar beside the page in the phone layout");
 }
 
 #[test]

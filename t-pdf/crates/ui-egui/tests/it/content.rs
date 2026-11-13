@@ -731,6 +731,8 @@ fn format_text_fits_the_tools_pane_at_its_narrowest() {
     use egui::accesskit::Role;
     let mut h = harness();
     // At the largest interface size too: it scales points to pixels, and the layout is in points.
+    // A window that keeps the desktop layout at that size (a smaller one is a phone's).
+    h.set_size(egui::vec2(2400.0, 1500.0));
     h.state_mut().set_option("ui-scale", "300").unwrap();
     h.state_mut().side_panels.tools_width = 0.0;
     assert!(h.state_mut().execute("edit.text"));

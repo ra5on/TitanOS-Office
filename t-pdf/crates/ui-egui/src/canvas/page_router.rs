@@ -191,6 +191,12 @@ impl PageRouter {
         self.capture.as_ref().is_some_and(|c| !c.declines_drag)
     }
 
+    /// Whether a comment (or a Fill & Sign mark) holds the press and keeps its drag: a finger's
+    /// drag then moves it, where any other finger's drag pans the view.
+    pub(crate) fn comment_holds(&self) -> bool {
+        self.capture.as_ref().is_some_and(|c| !c.declines_drag && matches!(c.owner, Owner::Comment { .. }))
+    }
+
     /// The press is over once the button is up and its release has been seen.
     pub(crate) fn settle(&mut self, any_down: bool, edges: bool) {
         if !any_down && !edges {

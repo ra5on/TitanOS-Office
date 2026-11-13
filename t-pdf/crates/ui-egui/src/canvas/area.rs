@@ -144,6 +144,23 @@ pub(super) fn drawing_edge_pointer(ui: &egui::Ui) -> (Option<Pos2>, f32) {
     ui.input(|i| (i.pointer.latest_pos(), i.stable_dt))
 }
 
+/// Whether the press the page view sees is a finger's, given what it was last frame (`was`): a
+/// finger that comes down makes it one, a press without one (the mouse's, a pen's) does not, and
+/// it stays what it was until the next press. In a browser a finger's press comes twice: its
+/// pointer event a frame before its touch. Not page input: read before the pages' widget exists, it
+/// decides whether the press's drag pans the view.
+pub(super) fn finger_press(ui: &egui::Ui, was: bool) -> bool {
+    ui.input(|i| {
+        if i.events.iter().any(|e| matches!(e, egui::Event::Touch { phase: egui::TouchPhase::Start, .. })) {
+            true
+        } else if i.pointer.any_pressed() {
+            false
+        } else {
+            was
+        }
+    })
+}
+
 /// A press anywhere, or a key, stops the touchpad's glide (#531).
 pub(super) fn glide_interrupted(ui: &egui::Ui) -> bool {
     ui.input(|i| i.pointer.any_pressed() || i.events.iter().any(|e| matches!(e, egui::Event::Key { pressed: true, .. })))

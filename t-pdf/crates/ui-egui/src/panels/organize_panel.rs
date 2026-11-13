@@ -50,15 +50,16 @@ pub(crate) fn panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
     let mut close = false;
     let Some(view) = app.views.get_mut(index) else { return };
 
+    let button = crate::compact::pane_button(ui.ctx());
     ui.horizontal(|ui| {
-        if icons::button(ui, "chevron-left", 26.0, false, tl!("Back to all tools")).clicked() {
+        if icons::button(ui, "chevron-left", button, false, tl!("Back to all tools")).clicked() {
             back = true;
         }
         let title = tl!("Organize pages");
-        let title_width = (ui.available_width() - 26.0 - ui.spacing().item_spacing.x).max(1.0);
+        let title_width = (ui.available_width() - button - ui.spacing().item_spacing.x).max(1.0);
         ui.add_sized([title_width, 26.0], egui::Label::new(egui::RichText::new(title).font(theme::semibold(15.5)).color(t.text)).truncate())
             .on_hover_text(title);
-        if icons::button(ui, "x", 26.0, false, tl!("Close panel")).clicked() {
+        if icons::button(ui, "x", button, false, tl!("Close panel")).clicked() {
             close = true;
         }
     });

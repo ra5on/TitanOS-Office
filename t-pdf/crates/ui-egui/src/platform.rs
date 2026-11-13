@@ -1,3 +1,4 @@
+pub mod compact;
 pub(super) mod drag_pointer;
 pub(super) mod file_filter;
 #[cfg(not(target_arch = "wasm32"))]
@@ -12,6 +13,7 @@ pub(super) mod pickers;
 pub mod portable;
 #[cfg(not(target_arch = "wasm32"))]
 pub(super) mod system_fonts;
+pub(super) mod touch_press;
 pub mod ui_scale;
 pub mod updates;
 pub mod window_controls;

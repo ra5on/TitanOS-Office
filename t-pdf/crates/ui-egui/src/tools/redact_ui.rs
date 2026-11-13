@@ -382,7 +382,7 @@ pub(crate) fn pages_body(ui: &mut egui::Ui, d: &mut PagesDraft, pages: usize, _t
 
 /// Find text and redact. Returns (search, cancel, import a word list).
 pub(crate) fn search_body(ui: &mut egui::Ui, d: &mut SearchDraft, t: &Tokens) -> (bool, bool, bool) {
-    ui.set_width(420.0);
+    crate::widgets::dialog_width(ui, 420.0);
     ui.label(egui::RichText::new(tl!("Find text and redact")).font(crate::theme::semibold(18.0)));
     ui.add_space(8.0);
     widgets::radio_value(ui, &mut d.mode, SearchMode::Phrase, tl!("Single word or phrase"));
@@ -437,7 +437,7 @@ pub(crate) fn search_body(ui: &mut egui::Ui, d: &mut SearchDraft, t: &Tokens) ->
 
 /// Redaction Tool Properties. Returns (apply, cancel).
 pub(crate) fn props_body(ui: &mut egui::Ui, d: &mut RedactPrefs, _t: &Tokens) -> (bool, bool) {
-    ui.set_width(780.0);
+    crate::widgets::dialog_width(ui, 780.0);
     ui.label(egui::RichText::new(tl!("Redaction Tool Properties")).font(crate::theme::semibold(18.0)));
     ui.add_space(8.0);
     // Two columns, so three colour grids fit a short window: the redacted result and its
@@ -445,7 +445,7 @@ pub(crate) fn props_body(ui: &mut egui::Ui, d: &mut RedactPrefs, _t: &Tokens) ->
     // the right.
     ui.horizontal_top(|ui| {
         ui.vertical(|ui| {
-            ui.set_width(380.0);
+            crate::widgets::dialog_width(ui, 380.0);
             egui::Grid::new("redact-props").num_columns(2).spacing([12.0, 10.0]).show(ui, |ui| {
                 ui.label(tl!("Redacted area fill colour:"));
                 ui.horizontal(|ui| {
@@ -549,7 +549,7 @@ pub(crate) fn props_body(ui: &mut egui::Ui, d: &mut RedactPrefs, _t: &Tokens) ->
         // No separator here: in a horizontal layout it would stretch to the window's bottom.
         ui.add_space(28.0);
         ui.vertical(|ui| {
-            ui.set_width(340.0);
+            crate::widgets::dialog_width(ui, 340.0);
             ui.label(egui::RichText::new(tl!("Redaction mark appearance")).strong());
             ui.add_space(6.0);
             egui::Grid::new("redact-mark").num_columns(2).spacing([12.0, 10.0]).show(ui, |ui| {
@@ -584,7 +584,7 @@ pub(crate) fn props_body(ui: &mut egui::Ui, d: &mut RedactPrefs, _t: &Tokens) ->
 
 /// Apply redactions confirmation. Returns (apply, cancel).
 pub(crate) fn apply_body(ui: &mut egui::Ui, marks: usize, t: &Tokens) -> (bool, bool) {
-    ui.set_width(420.0);
+    crate::widgets::dialog_width(ui, 420.0);
     ui.label(egui::RichText::new(tl!("Apply redactions")).font(crate::theme::semibold(18.0)));
     ui.add_space(8.0);
     ui.label(if marks == 1 {
@@ -634,7 +634,7 @@ impl PdfCraftApp {
 
 /// Returns (remove, cancel).
 pub(crate) fn hidden_body(ui: &mut egui::Ui, d: &mut HiddenDraft, t: &Tokens) -> (bool, bool) {
-    ui.set_width(440.0);
+    crate::widgets::dialog_width(ui, 440.0);
     ui.label(egui::RichText::new(tl!("Remove hidden information")).font(crate::theme::semibold(18.0)));
     ui.add_space(4.0);
     ui.label(egui::RichText::new(tl!("Select the items to remove from this document.")).color(t.text_muted));
@@ -670,7 +670,7 @@ pub(crate) fn hidden_body(ui: &mut egui::Ui, d: &mut HiddenDraft, t: &Tokens) ->
 
 /// Sanitize Document confirmation. Returns (sanitize, cancel).
 pub(crate) fn sanitize_body(ui: &mut egui::Ui, t: &Tokens) -> (bool, bool) {
-    ui.set_width(440.0);
+    crate::widgets::dialog_width(ui, 440.0);
     ui.label(egui::RichText::new(tl!("Sanitize document")).font(crate::theme::semibold(18.0)));
     ui.add_space(8.0);
     ui.label(tl!("Sanitizing removes hidden information from the document: metadata, file attachments, comments, form fields (flattened), hidden text and layers, bookmarks, links, actions and scripts, and private application data."));
