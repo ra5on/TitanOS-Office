@@ -79,13 +79,15 @@ fn tab_label(panel: PanelKind) -> &'static str {
 /// for the Timeline its sequence tabs, which take at most two thirds of the strip. The other tabs
 /// go to the group's "…" menu, but the shown tab has nowhere to go: a narrower group would cut its
 /// name with "…" (the Audio Meters column, the right-hand columns in a narrow window). Only the
-/// shown panel of a group asks for room, so the window's width goes to what is on screen; the
-/// Tools column shows no tab at all and keeps its width.
+/// shown panel of a group asks for room, so the window's width goes to what is on screen. The
+/// Tools column shows no tab at all and keeps its width, and the Audio Meters column may be made
+/// as narrow as its meters allow (it drops its readout, then its scale); its default width,
+/// `METERS_WIDTH`, holds its German name.
 fn tab_min_widths(ui: &egui::Ui, style: &DockStyle, layout: &Layout<PanelKind>, seqs: &SeqTabs, seq_width: f32) -> HashMap<PanelKind, f32> {
     let (shown, grouped) = shown_panels(layout);
     PanelKind::ALL
         .iter()
-        .filter(|panel| **panel != PanelKind::Tools && shown.contains(panel))
+        .filter(|panel| !matches!(panel, PanelKind::Tools | PanelKind::AudioMeters) && shown.contains(panel))
         .map(|&panel| {
             let label = if panel == PanelKind::Timeline && seqs.open.is_empty() { seqs.label() } else { tab_label(panel).to_string() };
             let name = ui.painter().layout_no_wrap(label, style.font.clone(), egui::Color32::WHITE).size().x.ceil();
