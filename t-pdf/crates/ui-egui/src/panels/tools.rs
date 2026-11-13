@@ -44,10 +44,20 @@ pub(crate) fn panel_header(ui: &mut egui::Ui, t: &Tokens, title: &str, lead: Opt
             go_back = true;
         }
         // Reserve space for Close before laying out the translated title. Long tool names
-        // must never expand the fixed-width sidebar or push the Close control off-screen.
+        // must never expand the fixed-width sidebar or push the Close control off-screen: a name
+        // wider than its room wraps onto a second line instead of being cut.
         let title_width = (ui.available_width() - 26.0 - ui.spacing().item_spacing.x).max(1.0);
-        ui.add_sized([title_width, 26.0], egui::Label::new(egui::RichText::new(tl!(title)).font(theme::semibold(15.5)).color(t.text)).truncate())
-            .on_hover_text(tl!(title));
+        let font = theme::semibold(15.5);
+        let fits = widgets::text_width(ui, tl!(title), &font) <= title_width;
+        let label = egui::Label::new(egui::RichText::new(tl!(title)).font(font).color(t.text));
+        if fits {
+            ui.add_sized([title_width, 26.0], label);
+        } else {
+            ui.allocate_ui_with_layout(vec2(title_width, 26.0), egui::Layout::top_down(egui::Align::Min), |ui| {
+                ui.set_min_width(title_width);
+                ui.add(label.wrap());
+            });
+        }
         if icons::button(ui, "x", 26.0, false, tl!("Close panel")).clicked() {
             close = true;
         }
@@ -106,43 +116,47 @@ fn all_tools(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
     });
 }
 
-/// Draw a one-line row label without painting into the status chip or beyond the sidebar.
-/// Accessibility retains the complete name through the row's WidgetInfo.
-pub(super) fn row_label(ui: &mut egui::Ui, text: &str, font: egui::FontId, color: Color32, left_center: egui::Pos2, max_width: f32) -> bool {
-    let mut job = egui::text::LayoutJob::simple_singleline(text.to_owned(), font, color);
-    job.wrap = egui::text::TextWrapping { max_width: max_width.max(1.0), max_rows: 1, break_anywhere: true, ..Default::default() };
-    let galley = ui.fonts_mut(|f| f.layout_job(job));
-    let elided = galley.elided;
-    ui.painter().galley(left_center - vec2(0.0, galley.size().y / 2.0), galley, color);
-    elided
+/// A list row's label wrapped onto as many lines as `max_width` needs, never cut: laid out before
+/// the row is allocated, so the row grows to hold a long name ([`row_height`]).
+pub(super) fn row_label(ui: &egui::Ui, text: &str, font: egui::FontId, color: Color32, max_width: f32) -> std::sync::Arc<egui::Galley> {
+    let job = egui::text::LayoutJob::simple(text.to_owned(), font, color, max_width.max(1.0));
+    ui.fonts_mut(|f| f.layout_job(job))
+}
+
+/// The height of a list row holding `label`: 34 pt for one line, more for a wrapped name.
+pub(super) fn row_height(label: &egui::Galley) -> f32 {
+    (label.size().y + 16.0).max(34.0)
+}
+
+/// Paint `label` in a row with its left edge at `left_center`, centred on the row's middle.
+pub(super) fn paint_row_label(ui: &egui::Ui, label: std::sync::Arc<egui::Galley>, left_center: egui::Pos2, color: Color32) {
+    ui.painter().galley(left_center - vec2(0.0, label.size().y / 2.0), label, color);
 }
 
 /// Draw one tool-group row with its icon, label, badge and availability hint.
 fn tool_row(ui: &mut egui::Ui, t: &Tokens, g: &ToolGroup, is_pinned: bool) -> (egui::Response, bool) {
-    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
+    let width = ui.available_width();
+    let pin_space = 26.0;
+    let badge_reserved = match g.badge {
+        Some(b) => ui.fonts_mut(|f| f.layout_no_wrap(tl!(b).to_owned(), theme::semibold(9.5), Color32::WHITE).size().x) + 18.0,
+        None => 0.0,
+    };
+    let label_width = width - 36.0 - pin_space - badge_reserved - 8.0;
+    let label = row_label(ui, tl!(g.label), theme::regular(13.5), t.text, label_width);
+    let (rect, resp) = ui.allocate_exact_size(vec2(width, row_height(&label)), Sense::click());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!(g.label)));
     let press = theme::Press::track(ui, &resp);
     press.wash(ui, rect, 6, false);
     let body = rect.translate(press.offset());
-    icons::paint(ui, Rect::from_min_size(body.min + vec2(6.0, 7.0), vec2(20.0, 20.0)), g.icon, 19.0, hue(g));
+    icons::paint(ui, Rect::from_center_size(body.left_center() + vec2(16.0, 0.0), vec2(20.0, 20.0)), g.icon, 19.0, hue(g));
 
     let pin_rect = Rect::from_center_size(body.right_center() - vec2(14.0, 0.0), vec2(22.0, 22.0));
     let pin_resp = ui.interact(pin_rect, ui.scope_id().with(("pin_toggle_row", g.id)), Sense::click());
     let pin_hovered = pin_resp.hovered();
     let mut pin_clicked = false;
 
-    let pin_space = 26.0;
-    let badge_or_hint_reserved = match (g.badge, g.availability) {
-        (Some(b), _) => ui.fonts_mut(|f| f.layout_no_wrap(tl!(b).to_owned(), theme::semibold(9.5), Color32::WHITE).size().x) + 18.0,
-        (None, Availability::Planned(m)) if resp.hovered() => {
-            let hint = format!("{} · {m}", tl!("Planned"));
-            ui.fonts_mut(|f| f.layout_no_wrap(hint, theme::medium(10.5), t.text_faint).size().x) + 10.0
-        }
-        _ => 0.0,
-    };
-    let right_reserved = pin_space + badge_or_hint_reserved + 8.0;
-    let clipped =
-        row_label(ui, tl!(g.label), theme::regular(13.5), t.text, body.left_center() + vec2(36.0, 0.0), rect.width() - 36.0 - right_reserved);
+    let label_used = label.size().x;
+    paint_row_label(ui, label, body.left_center() + vec2(36.0, 0.0), t.text);
     match (g.badge, g.availability) {
         (Some(b), _) => {
             let font = theme::semibold(9.5);
@@ -152,15 +166,14 @@ fn tool_row(ui: &mut egui::Ui, t: &Tokens, g: &ToolGroup, is_pinned: bool) -> (e
             ui.painter().rect_filled(r, CornerRadius::same(4), t.badge_new);
             ui.painter().text(r.center(), Align2::CENTER_CENTER, badge, font, Color32::WHITE);
         }
-        // Planned tools: a quiet milestone hint instead of a chip, so the list stays calm.
+        // Planned tools: a quiet milestone hint instead of a chip, so the list stays calm. Only
+        // where it fits beside the name; the tooltip says it too.
         (None, Availability::Planned(m)) if resp.hovered() => {
-            ui.painter().text(
-                body.right_center() - vec2(pin_space + 4.0, 0.0),
-                Align2::RIGHT_CENTER,
-                format!("{} · {m}", tl!("Planned")),
-                theme::medium(10.5),
-                t.text_faint,
-            );
+            let hint = format!("{} · {m}", tl!("Planned"));
+            let hint_w = ui.fonts_mut(|f| f.layout_no_wrap(hint.clone(), theme::medium(10.5), t.text_faint).size().x);
+            if 36.0 + label_used + 12.0 + hint_w + pin_space + 4.0 <= width {
+                ui.painter().text(body.right_center() - vec2(pin_space + 4.0, 0.0), Align2::RIGHT_CENTER, hint, theme::medium(10.5), t.text_faint);
+            }
         }
         _ => {}
     }
@@ -190,7 +203,6 @@ fn tool_row(ui: &mut egui::Ui, t: &Tokens, g: &ToolGroup, is_pinned: bool) -> (e
         Availability::Planned(m) => format!("{} {m} — {}", tl!("Planned for milestone"), tl!("open to see what it will include")),
         Availability::Provider => tl!("Optional: needs an AI provider you configure").into(),
     };
-    let tip = if clipped { format!("{} — {tip}", tl!(g.label)) } else { tip };
     (theme::hand(resp).on_hover_text(tip), pin_clicked)
 }
 
@@ -255,20 +267,8 @@ fn tool_detail(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static
                 if g.id == "fill_sign" && (item.command.starts_with("sign.fill.signature") || item.command.starts_with("sign.fill.initials")) {
                     continue;
                 }
-                let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
-                resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!(item.label)));
                 let ready = item.availability == Availability::Ready;
-                let press = theme::Press::track(ui, &resp);
-                press.wash(ui, rect, 6, false);
-                let body = rect.translate(press.offset());
                 let fg = if ready { t.text } else { t.text_muted };
-                icons::paint(
-                    ui,
-                    Rect::from_min_size(body.min + vec2(6.0, 8.0), vec2(18.0, 18.0)),
-                    item.icon,
-                    17.0,
-                    if ready { hue(g) } else { t.text_faint },
-                );
                 let (chip, fill, cfg) = match item.availability {
                     Availability::Ready => (tl!("Ready"), Color32::from_rgb(0xDD, 0xF3, 0xE4), Color32::from_rgb(0x1E, 0x7B, 0x43)),
                     Availability::Planned(m) => (m, t.pressed, t.text_muted),
@@ -277,8 +277,23 @@ fn tool_detail(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static
                 let font = theme::semibold(9.5);
                 let chip_label = tl!(chip).to_string();
                 let w = crate::widgets::text_width(ui, &chip_label, &font);
+                let width = ui.available_width();
+                // The chip's left edge is `w + 15` from the row's right; the name stops 8 short of it.
+                let label = row_label(ui, tl!(item.label), theme::regular(13.0), fg, width - w - 15.0 - 42.0);
+                let (rect, resp) = ui.allocate_exact_size(vec2(width, row_height(&label)), Sense::click());
+                resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!(item.label)));
+                let press = theme::Press::track(ui, &resp);
+                press.wash(ui, rect, 6, false);
+                let body = rect.translate(press.offset());
+                icons::paint(
+                    ui,
+                    Rect::from_center_size(body.left_center() + vec2(15.0, 0.0), vec2(18.0, 18.0)),
+                    item.icon,
+                    17.0,
+                    if ready { hue(g) } else { t.text_faint },
+                );
                 let r = Rect::from_center_size(body.right_center() - vec2(w / 2.0 + 10.0, 0.0), vec2(w + 10.0, 16.0));
-                row_label(ui, tl!(item.label), theme::regular(13.0), fg, body.left_center() + vec2(34.0, 0.0), r.left() - body.left() - 42.0);
+                paint_row_label(ui, label, body.left_center() + vec2(34.0, 0.0), fg);
                 ui.painter().rect_filled(r, CornerRadius::same(4), fill);
                 ui.painter().text(r.center(), Align2::CENTER_CENTER, chip_label, font, cfg);
                 let resp = theme::hand(resp).on_hover_text(format!("{} — {}", tl!(item.label), item.command));

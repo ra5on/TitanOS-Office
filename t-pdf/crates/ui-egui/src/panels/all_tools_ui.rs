@@ -2,6 +2,8 @@
 //! field, filling the workspace instead of the sidebar. The sidebar's expand button opens it;
 //! its collapse button, Esc or choosing a tool closes it again.
 
+use std::sync::Arc;
+
 use egui::{Align2, Color32, CornerRadius, Rect, Sense, Stroke, vec2};
 use pdfcraft_engine::catalog::{self, Availability, TOOL_CATEGORIES, ToolGroup};
 
@@ -86,10 +88,17 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                     ui.add_space(12.0);
                     ui.label(egui::RichText::new(tl!(category.label)).font(theme::semibold(16.0)).color(t.text));
                     ui.add_space(10.0);
+                    let height = found
+                        .iter()
+                        .map(|(g, items)| {
+                            let (title, note) = tile_text(ui, &t, g, items);
+                            tile_height(&title, note.as_ref().map(|(n, _)| n))
+                        })
+                        .fold(TILE.y, f32::max);
                     ui.horizontal_wrapped(|ui| {
                         ui.spacing_mut().item_spacing = vec2(14.0, 14.0);
                         for (g, items) in found {
-                            if tile(ui, &t, g, &items).clicked() {
+                            if tile(ui, &t, g, &items, height).clicked() {
                                 chosen = Some(g.id);
                             }
                         }
@@ -109,27 +118,13 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     }
 }
 
-/// One tool's tile: its icon and name, then the `items` the search found it by or, when there are
-/// none, its availability (a planned tool is greyed out with its milestone). A name or note cut
-/// short shows in full on hover.
-fn tile(ui: &mut egui::Ui, t: &Tokens, g: &ToolGroup, items: &[&'static str]) -> egui::Response {
-    let (rect, resp) = ui.allocate_exact_size(TILE, Sense::click());
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!(g.label)));
-    let press = theme::Press::track(ui, &resp);
-    crate::home::card_lift(ui, t, rect, press);
-    ui.painter().rect(rect, CornerRadius::same(10), press.fill(t.card, t.hover, t.pressed), Stroke::new(1.0, t.divider), egui::StrokeKind::Inside);
-    let body = rect.translate(press.offset());
+/// A tile's name and note (the `items` the search found the tool by or, when there are none, its
+/// availability), each wrapped and centred onto as many lines as it needs: never cut short.
+fn tile_text(ui: &egui::Ui, t: &Tokens, g: &ToolGroup, items: &[&'static str]) -> (Arc<egui::Galley>, Option<(Arc<egui::Galley>, Color32)>) {
     let ready = g.availability == Availability::Ready;
-    let hue = Color32::from_rgb(g.hue[0], g.hue[1], g.hue[2]);
-    icons::paint(ui, Rect::from_center_size(body.center_top() + vec2(0.0, 34.0), vec2(32.0, 32.0)), g.icon, 30.0, hue);
-    let mut job =
-        egui::text::LayoutJob::simple(tl!(g.label).to_owned(), theme::medium(13.0), if ready { t.text } else { t.text_muted }, body.width() - 16.0);
+    let mut job = egui::text::LayoutJob::simple(tl!(g.label).to_owned(), theme::medium(13.0), if ready { t.text } else { t.text_muted }, TILE.x - 16.0);
     job.halign = egui::Align::Center;
-    job.wrap.max_rows = 2;
     let title = ui.fonts_mut(|f| f.layout_job(job));
-    let mut elided = title.elided;
-    let title_h = title.size().y;
-    ui.painter().galley(body.center_top() + vec2(0.0, 60.0), title, t.text);
     // What found the tool, or else whether it works today.
     let note = if items.is_empty() {
         match g.availability {
@@ -140,13 +135,35 @@ fn tile(ui: &mut egui::Ui, t: &Tokens, g: &ToolGroup, items: &[&'static str]) ->
     } else {
         items.iter().take(MATCHES_SHOWN).map(|l| tl!(l)).collect::<Vec<_>>().join(" · ")
     };
-    if !note.is_empty() {
+    let note = (!note.is_empty()).then(|| {
         let color = if items.is_empty() { t.text_faint } else { t.accent_text };
-        let mut job = egui::text::LayoutJob::simple_singleline(note.clone(), theme::regular(11.0), color);
+        let mut job = egui::text::LayoutJob::simple(note, theme::regular(11.0), color, TILE.x - 16.0);
         job.halign = egui::Align::Center;
-        job.wrap = egui::text::TextWrapping { max_width: body.width() - 16.0, max_rows: 1, break_anywhere: true, ..Default::default() };
-        let galley = ui.fonts_mut(|f| f.layout_job(job));
-        elided |= galley.elided;
+        (ui.fonts_mut(|f| f.layout_job(job)), color)
+    });
+    (title, note)
+}
+
+/// The height of a tile with this name and note: the usual [`TILE`] height, or more for a long one.
+fn tile_height(title: &egui::Galley, note: Option<&Arc<egui::Galley>>) -> f32 {
+    (64.0 + title.size().y + note.map_or(0.0, |n| n.size().y) + 12.0).max(TILE.y)
+}
+
+/// One tool's tile, `height` tall: its icon and name, then the `items` the search found it by or,
+/// when there are none, its availability (a planned tool is greyed out with its milestone).
+fn tile(ui: &mut egui::Ui, t: &Tokens, g: &ToolGroup, items: &[&'static str], height: f32) -> egui::Response {
+    let (title, note) = tile_text(ui, t, g, items);
+    let (rect, resp) = ui.allocate_exact_size(vec2(TILE.x, height), Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!(g.label)));
+    let press = theme::Press::track(ui, &resp);
+    crate::home::card_lift(ui, t, rect, press);
+    ui.painter().rect(rect, CornerRadius::same(10), press.fill(t.card, t.hover, t.pressed), Stroke::new(1.0, t.divider), egui::StrokeKind::Inside);
+    let body = rect.translate(press.offset());
+    let hue = Color32::from_rgb(g.hue[0], g.hue[1], g.hue[2]);
+    icons::paint(ui, Rect::from_center_size(body.center_top() + vec2(0.0, 34.0), vec2(32.0, 32.0)), g.icon, 30.0, hue);
+    let title_h = title.size().y;
+    ui.painter().galley(body.center_top() + vec2(0.0, 60.0), title, t.text);
+    if let Some((galley, color)) = note {
         ui.painter().galley(body.center_top() + vec2(0.0, 64.0 + title_h), galley, color);
     }
     if let Some(b) = g.badge.filter(|_| g.availability == Availability::Ready) {
@@ -156,7 +173,6 @@ fn tile(ui: &mut egui::Ui, t: &Tokens, g: &ToolGroup, items: &[&'static str]) ->
         ui.painter().rect_filled(r, CornerRadius::same(4), t.badge_new);
         ui.painter().text(r.center(), Align2::CENTER_CENTER, tl!(b), font, Color32::WHITE);
     }
-    let resp = if elided { resp.on_hover_text(format!("{}\n{note}", tl!(g.label))) } else { resp };
     theme::hand(resp)
 }
 

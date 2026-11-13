@@ -1,4 +1,4 @@
-use super::tools::row_label;
+use super::tools::{paint_row_label, row_height, row_label};
 use super::{
     Align2, Availability, Color32, CornerRadius, LeftPanel, PdfCraftApp, Rect, Sense, Stroke, Tokens, ToolGroup, ToolItem, catalog, icons, theme,
     vec2, widgets,
@@ -163,15 +163,17 @@ pub(super) fn actions_menu(
 /// One row of the Edit panel: a monochrome icon and the label, as Acrobat draws them. A planned
 /// item is muted and says when it ships when hovered.
 fn edit_row(ui: &mut egui::Ui, t: &Tokens, icon: &str, label: &str, availability: Availability) -> egui::Response {
-    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
+    let ready = availability == Availability::Ready;
+    let fg = if ready { t.text } else { t.text_muted };
+    let width = ui.available_width();
+    let text = row_label(ui, label, theme::regular(13.5), fg, width - 42.0);
+    let (rect, resp) = ui.allocate_exact_size(vec2(width, row_height(&text)), Sense::click());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
     let press = theme::Press::track(ui, &resp);
     press.wash(ui, rect, 6, false);
     let body = rect.translate(press.offset());
-    let ready = availability == Availability::Ready;
-    let fg = if ready { t.text } else { t.text_muted };
-    icons::paint(ui, Rect::from_min_size(body.min + vec2(6.0, 8.0), vec2(18.0, 18.0)), icon, 17.0, if ready { t.text } else { t.text_faint });
-    row_label(ui, label, theme::regular(13.5), fg, body.left_center() + vec2(34.0, 0.0), rect.width() - 42.0);
+    icons::paint(ui, Rect::from_center_size(body.left_center() + vec2(15.0, 0.0), vec2(18.0, 18.0)), icon, 17.0, if ready { t.text } else { t.text_faint });
+    paint_row_label(ui, text, body.left_center() + vec2(34.0, 0.0), fg);
     let resp = theme::hand(resp);
     match availability {
         Availability::Ready => resp,
