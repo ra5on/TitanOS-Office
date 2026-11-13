@@ -163,11 +163,11 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     // workspace name (caps)
     let ws = crate::i18n::to_uppercase(crate::i18n::t(&app.ui.workspace));
     let wg = p.layout_no_wrap(ws.clone(), Tokens::ui(11.0), t.text_dim);
-    let wr = Rect::from_min_size(pos2(cluster_left - 28.0 - wg.size().x, rect.center().y - 10.0), vec2(wg.size().x + 8.0, 20.0));
+    let wr = Rect::from_min_size(pos2(cluster_left - wg.size().x, rect.center().y - 10.0), vec2(wg.size().x + 8.0, 20.0));
     // The name and the GitHub button are extras (the Workspaces button opens the same list, Help
     // has the link): in a narrow window the in-window menus reach them, and each is left out
-    // rather than drawn over the menus.
-    let ws_fits = wr.min.x >= left_end + 8.0;
+    // rather than drawn over the menus. The name stands beside its Workspaces button only.
+    let ws_fits = shown == QUICK_ACTIONS.len() && wr.min.x >= left_end + 8.0;
     let mut ws_name_clicked = false;
     if ws_fits {
         let wresp = ui.interact(wr, egui::Id::unique("hdr-ws-name"), Sense::click());
