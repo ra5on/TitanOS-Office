@@ -1,5 +1,8 @@
 use super::{DocInfo, DocView, Fit, GAP, MARGIN, PT, PageLayout, Pos2, Rect, SIDE, SavedDisplay, Vec2, device_pixels, pos2, vec2};
 
+/// How much further a double tap zooms in from fitting the width.
+pub(crate) const DOUBLE_TAP_ZOOM: f32 = 2.0;
+
 /// The page grid's zoom range and the step of its buttons and keys.
 pub const GRID_ZOOM_RANGE: std::ops::RangeInclusive<f32> = 0.5..=3.0;
 
@@ -201,6 +204,31 @@ impl DocView {
     pub fn set_grid_zoom(&mut self, zoom: f32) {
         if zoom.is_finite() {
             self.grid_zoom = zoom.clamp(*GRID_ZOOM_RANGE.start(), *GRID_ZOOM_RANGE.end());
+        }
+    }
+
+    /// The zoom that fits the width, whatever the zoom mode is now.
+    fn width_fit_zoom(&mut self, info: &DocInfo) -> f32 {
+        let (fit, zoom) = (self.fit, self.zoom);
+        self.fit = Fit::Width;
+        self.fit_zoom(info);
+        let fitted = self.zoom;
+        (self.fit, self.zoom) = (fit, zoom);
+        fitted
+    }
+
+    /// A finger's double tap at `at` (screen), if there was one, as on a phone: at the width or
+    /// smaller, zoom in [`DOUBLE_TAP_ZOOM`] times as far about the tap; zoomed in, back to fitting
+    /// the width, about the tap too, and fitting it from then on.
+    pub(crate) fn double_tap_zoom(&mut self, ui: &egui::Ui, info: &DocInfo, at: Option<Pos2>) {
+        let Some(at) = at else { return };
+        ui.ctx().request_repaint();
+        let fitted = self.width_fit_zoom(info);
+        if self.zoom <= fitted * 1.05 {
+            self.zoom_at(fitted * DOUBLE_TAP_ZOOM, at);
+        } else {
+            self.zoom_at(fitted, at);
+            self.fit = Fit::Width;
         }
     }
 

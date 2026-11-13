@@ -434,6 +434,8 @@ impl eframe::App for PdfCraftApp {
         let known = ctx.input(|i| i.pointer.latest_pos().is_some());
         let size = ctx.input(|i| i.viewport().inner_rect).map_or(egui::Vec2::ZERO, |r| r.size());
         drag_pointer::locate_wheel(raw, known, size, || drag_pointer::in_window(ctx));
+        // A phone's browser presses twice for one finger.
+        crate::platform::touch_press::one_press_per_touch(raw, ctx.input(|i| i.pointer.primary_down()));
         self.prepare_raw_input(ctx, raw);
         if raw.hovered_files.is_empty() && raw.dropped_files.is_empty() {
             return;

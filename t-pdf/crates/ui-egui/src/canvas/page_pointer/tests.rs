@@ -241,8 +241,9 @@ const RAW_READS: [&str; 21] = [
 
 /// Functions in the page modules that are not page input and read egui's pointer state
 /// themselves: (file, function, why).
-const NOT_PAGE_INPUT: [(&str, &str, &str); 10] = [
+const NOT_PAGE_INPUT: [(&str, &str, &str); 11] = [
     ("canvas/area.rs", "zoom_anchor", "a pinch zooms the whole view, and is read before the pages' widget exists"),
+    ("canvas/area.rs", "finger_press", "whether a press is a finger's, read before the pages' widget exists: a finger's drag pans the view"),
     ("canvas/area.rs", "drawing_edge_pointer", "scrolls the view at its edges, read before the pages' widget exists"),
     ("canvas/area.rs", "glide_interrupted", "a press anywhere stops the touchpad's glide"),
     ("canvas/area.rs", "presentation_click", "full screen's click to turn the page, read before the pages' widget exists"),
@@ -566,14 +567,23 @@ const COMMENT_POINT_TESTERS: [(&str, &str, &str); 3] = [
 ];
 
 /// What reads who holds the press the pages hold.
-const ROUTER_READS: [&str; 6] =
-    ["router.press_for(", "router.owner(", "router.keeps_drag(", "PageRouter::press_for(", "PageRouter::owner(", "PageRouter::keeps_drag("];
+const ROUTER_READS: [&str; 8] = [
+    "router.press_for(",
+    "router.owner(",
+    "router.keeps_drag(",
+    "router.comment_holds(",
+    "PageRouter::press_for(",
+    "PageRouter::owner(",
+    "PageRouter::keeps_drag(",
+    "PageRouter::comment_holds(",
+];
 
 /// The functions that read who holds the press: (file, function, why). The page view asks once per
 /// page and tells each module what the press is to its page (`PagePress`); the Edit text group, the
 /// text layer and link following still ask, until they are told too (PR 4b), and an unused entry
 /// fails the test.
-const ROUTER_READERS: [(&str, &str, &str); 8] = [
+const ROUTER_READERS: [(&str, &str, &str); 9] = [
+    ("canvas.rs", "drag_pans", "a finger's drag pans the view, unless a comment holds its press and moves with it"),
     (
         "canvas/page_input.rs",
         "page_tool_input",

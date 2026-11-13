@@ -42,7 +42,7 @@ mod zoom;
 pub(super) mod zoom_snap;
 
 pub(crate) use area::signature_badges;
-use area::{drawing_edge_pointer, glide_interrupted, page_scroll, presentation_click, run_button, set_layers, zoom_anchor};
+use area::{drawing_edge_pointer, finger_press, glide_interrupted, page_scroll, presentation_click, run_button, set_layers, zoom_anchor};
 #[cfg(test)]
 use bars::in_size_hint_zone;
 use bars::{Notice, notices, page_size_hint, quick_bar};
@@ -579,6 +579,9 @@ pub struct DocView {
     /// The narrow layout ([`crate::compact`]): no quick bar floats beside the pages, so their
     /// gutters are thin ([`Self::side`]). Set every frame from the window.
     pub(crate) narrow: bool,
+    /// The press the view sees is a finger's (`area::finger_press`): with the Select tool its drag
+    /// pans the view instead of selecting text, and a double tap zooms, as on a phone.
+    pub(crate) finger: bool,
     page_count: usize,
     /// Page heights in points (view space), for mapping text positions to scroll offsets.
     page_heights: Vec<f32>,
@@ -988,6 +991,7 @@ impl DocView {
             viewport_w: 800.0,
             viewport_h: 600.0,
             narrow: false,
+            finger: false,
             page_count: info.pages.len(),
             page_heights: info.pages.iter().map(|p| p.height).collect(),
             screen_rects: Vec::new(),
@@ -1231,6 +1235,8 @@ struct PageOut {
     comment_notice: Option<&'static str>,
     copy_comments: bool,
     copy_selected: bool,
+    /// Where a finger double-tapped the pages, to zoom about (`DocView::double_tap_zoom`).
+    double_tap: Option<Pos2>,
     field_menu: Option<FieldMenu>,
     field_placed: bool,
     field_props: bool,
@@ -1691,6 +1697,8 @@ fn draw_pages(
     // or a press they hold. The page modules read it rather than egui's raw pointer state.
     let ptr = PagePointer::read(ui, &resp, modal);
     cancel_on_escape(ui.ctx(), view, &ptr);
+    // A finger's double tap zooms, as on a phone; the mouse's selects a word.
+    let double_tap = (view.finger && matches!(tool, QuickTool::Select | QuickTool::Hand) && resp.double_clicked()).then_some(ptr.released).flatten();
     view.router.settle(ptr.any_down, !ptr.edges.is_empty());
     // A new press is no longer the last one's, wherever it lands (the page it is on gives it
     // its owner; in the gap between pages it is no page's).
@@ -2054,6 +2062,7 @@ fn draw_pages(
         comment_notice,
         copy_comments,
         copy_selected,
+        double_tap,
         field_menu,
         field_placed,
         field_props,
@@ -2856,11 +2865,18 @@ fn page_tool(view: &DocView, chosen: QuickTool) -> (QuickTool, bool) {
     (if placing { QuickTool::Select } else { chosen }, placing)
 }
 
-/// Text selection runs for the Select tool and for the markup tools (highlight…).
-fn tool_selects_text(tool: QuickTool, preparing: bool) -> bool {
+/// Whether a drag on the pages pans the view: the Hand tool's, and a finger's with the Select
+/// tool, as on a phone, unless a comment holds its press (its drag moves the comment).
+fn drag_pans(view: &DocView, tool: QuickTool) -> bool {
+    tool == QuickTool::Hand || view.finger && tool == QuickTool::Select && !view.router.comment_holds()
+}
+
+/// Text selection runs for the Select tool and for the markup tools (highlight…); not for a
+/// finger's press with the Select tool (`finger`), whose drag pans.
+fn tool_selects_text(tool: QuickTool, preparing: bool, finger: bool) -> bool {
     match tool {
         QuickTool::Comment(t) => t.markup().is_some() || t == comments::CommentTool::ReplaceText,
-        QuickTool::Select => !preparing,
+        QuickTool::Select => !preparing && !finger,
         QuickTool::Redact | QuickTool::ColumnSelect => true,
         QuickTool::Hand
         | QuickTool::Measure(_)
@@ -2924,6 +2940,7 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
         ui.data(|d| d.get_temp(can_paste_key)).unwrap_or(false)
     };
     app.views[index].narrow = app.compact;
+    app.views[index].finger = finger_press(ui, app.views[index].finger);
     // Keyboard scrolling applies to this frame's page view only, never later.
     let key_scroll = std::mem::take(&mut app.views[index].key_scroll);
     let key_side = std::mem::take(&mut app.views[index].key_side);
@@ -3043,11 +3060,8 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
         }
     };
 
-    let mut scroll = page_scroll_area(
-        ui,
-        view,
-        &ScrollGeometry { rects: &rects, y_shift, content_w, content_h, avail, middle_gesture, hand: app.quick_tool == QuickTool::Hand },
-    );
+    let pans = drag_pans(view, app.quick_tool);
+    let mut scroll = page_scroll_area(ui, view, &ScrollGeometry { rects: &rects, y_shift, content_w, content_h, avail, middle_gesture, hand: pans });
     let ppp = ui.ctx().pixels_per_point();
     let scale = view.render_scale(ppp);
     let tag = scale_tag(scale);
@@ -3061,7 +3075,7 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
     let hand = app.quick_tool == QuickTool::Hand;
     let (tool, placing) = page_tool(view, app.quick_tool);
     // Text selection runs for the Select tool and for the markup tools (highlight…).
-    let selects_text = tool_selects_text(tool, preparing);
+    let selects_text = tool_selects_text(tool, preparing, view.finger);
     let prefs = &app.comment_prefs;
     let redact_mark = (app.redact_prefs.hover_fill, app.redact_prefs.opacity);
     let units = app.units;
@@ -3105,7 +3119,7 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
     }
     view.move_background.prepare(ui.ctx(), doc, &view.content, scale);
 
-    scroll = refine_goto_point(scroll, view, &ScrollGeometry { rects: &rects, y_shift, content_w, content_h, avail, middle_gesture, hand });
+    scroll = refine_goto_point(scroll, view, &ScrollGeometry { rects: &rects, y_shift, content_w, content_h, avail, middle_gesture, hand: pans });
     let selection_wheel = view.selection_drag && navigation_enabled && unobstructed && !single_paging && ui.rect_contains_pointer(avail);
     let env = PageEnv {
         added: &added,
@@ -3184,6 +3198,7 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
         comment_notice,
         copy_comments,
         mut copy_selected,
+        double_tap,
         field_menu,
         field_placed,
         mut field_props,
@@ -3218,6 +3233,7 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
     ));
 
     view.viewport_screen = out.inner_rect;
+    view.double_tap_zoom(ui, info, double_tap);
     view.auto_scroll.paint(ui, avail);
     if unobstructed && matches!(tool, QuickTool::Select | QuickTool::ColumnSelect) {
         copy_selected |= selection_actions(ui, avail, view, info, prefs, allowed && !comments_hidden, can_copy);

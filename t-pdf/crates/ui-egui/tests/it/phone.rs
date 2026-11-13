@@ -1,12 +1,15 @@
 //! The narrow layout on a phone (TitanOS PLAN §87): the page takes the width when a document
-//! opens, the top bars stay on the screen, and a desktop window keeps its panes, rail and tabs.
+//! opens, a finger pans it and a double tap zooms it, the top bars stay on the screen, and a
+//! desktop window keeps its panes, rail and tabs.
 
 use egui::accesskit::Role;
-use egui::{Vec2, vec2};
+use egui::{Event, Modifiers, PointerButton, Pos2, TouchDeviceId, TouchId, TouchPhase, Vec2, pos2, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use pdfcraft_ui_egui::PdfCraftApp;
 use pdfcraft_ui_egui::canvas::{Fit, PT};
+
+use crate::support::input::{one_frame, touch_drag};
 
 const PORTRAIT: Vec2 = vec2(390.0, 844.0);
 const LANDSCAPE: Vec2 = vec2(844.0, 390.0);
@@ -14,7 +17,7 @@ const DESKTOP: Vec2 = vec2(1280.0, 800.0);
 /// An A4 page's width in points.
 const A4_WIDTH: f32 = 595.0;
 
-/// Three A4 pages of Helvetica text.
+/// Three A4 pages of Helvetica text, so a drag over the page is over text.
 fn fixture() -> Vec<u8> {
     let mut stream = String::new();
     for row in 0..40 {
@@ -62,6 +65,25 @@ fn fit(width: f32, side: f32) -> f32 {
     (width - 2.0 * side) / (A4_WIDTH * PT)
 }
 
+fn touch(phase: TouchPhase, p: Pos2) -> Event {
+    Event::Touch { device_id: TouchDeviceId(1), id: TouchId(1), phase, pos: p, force: None }
+}
+
+fn button(p: Pos2, pressed: bool) -> Event {
+    Event::PointerButton { pos: p, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE }
+}
+
+/// A finger's double tap at `p`: two taps in consecutive frames, each down and up in one frame.
+fn double_tap(h: &mut Harness<'static, PdfCraftApp>, p: Pos2) {
+    for _ in 0..2 {
+        one_frame(
+            h,
+            [touch(TouchPhase::Start, p), Event::PointerMoved(p), button(p, true), touch(TouchPhase::End, p), button(p, false), Event::PointerGone],
+        );
+    }
+    h.run_steps(4);
+}
+
 #[test]
 fn a_phone_opens_the_page_at_the_width_of_the_screen() {
     for size in [PORTRAIT, LANDSCAPE] {
@@ -107,4 +129,28 @@ fn the_top_bars_of_a_phone_stay_on_the_screen_with_touch_sized_buttons() {
             assert!(r.right() <= size.x + 0.5, "{size:?}: a button at {r:?} runs off the screen");
         }
     }
+}
+
+#[test]
+fn a_finger_pans_the_page_where_the_mouse_selects_text() {
+    let mut h = window(PORTRAIT);
+    crate::support::settle(&mut h);
+    let page = h.state().views[0].current;
+    touch_drag(&mut h, pos2(200.0, 700.0), pos2(200.0, 150.0));
+    touch_drag(&mut h, pos2(200.0, 700.0), pos2(200.0, 150.0));
+    let view = &h.state().views[0];
+    assert!(view.current > page, "two drags up turn to the next page: still on {}", view.current);
+    assert_eq!(view.selected_text(), None, "a finger's drag selects no text");
+}
+
+#[test]
+fn a_double_tap_zooms_in_and_back_to_the_width() {
+    let mut h = window(PORTRAIT);
+    let fitted = h.state().views[0].zoom;
+    double_tap(&mut h, pos2(150.0, 400.0));
+    let zoomed = h.state().views[0].zoom;
+    assert!((zoomed - 2.0 * fitted).abs() < 0.01, "zoom {zoomed} after a double tap from {fitted}");
+    double_tap(&mut h, pos2(150.0, 400.0));
+    let view = &h.state().views[0];
+    assert!((view.zoom - fitted).abs() < 0.01 && view.fit == Fit::Width, "back to the width: {} {:?}", view.zoom, view.fit);
 }
