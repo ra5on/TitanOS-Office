@@ -34,6 +34,33 @@ const MENU_W: f32 = 26.0;
 /// The room craft-ui gives a tab beside its name (its `TAB_PADDING`, which it does not export).
 const TAB_PADDING: f32 = 24.0;
 
+/// The width of craft-ui's "…" button that lists a group's tabs without room (its
+/// `OVERFLOW_WIDTH`), drawn beside the shown tab of a group of several panels.
+const OVERFLOW_WIDTH: f32 = 22.0;
+
+/// The panels that share their group with others: beside the tab such a group shows, its "…"
+/// button may need room too.
+fn grouped_panels(layout: &Layout<PanelKind>) -> std::collections::HashSet<PanelKind> {
+    fn walk(node: &Node<PanelKind>, out: &mut std::collections::HashSet<PanelKind>) {
+        match node {
+            Node::Tabs { panels, .. } if panels.len() > 1 => out.extend(panels.iter().copied()),
+            Node::Split { first, second, .. } => {
+                walk(first, out);
+                walk(second, out);
+            }
+            _ => {}
+        }
+    }
+    let mut out = std::collections::HashSet::new();
+    if let Some(root) = &layout.root {
+        walk(root, &mut out);
+    }
+    for window in &layout.floating {
+        walk(&window.root, &mut out);
+    }
+    out
+}
+
 /// A panel's name on its tab, in the interface language. The German Audio Meters tab is one short
 /// word ("Pegel") because its column beside the Timeline is narrow; the Window menu keeps
 /// "Audiopegel".
@@ -44,17 +71,20 @@ fn tab_label(panel: PanelKind) -> &'static str {
 /// The narrowest each panel's group is drawn, so that its tab shows the whole name whenever the
 /// panel is the one shown: the name, the tab's padding, the drag bar and the ≡ menu, and for the
 /// Timeline its sequence tabs, which take at most two thirds of the strip. Tabs that do not fit go
-/// to the group's "…" menu, but the shown tab has nowhere to go: a narrower group would cut its
-/// name with "…" (the Audio Meters column, the right-hand columns in a narrow window). The Tools
-/// column shows no tab at all and keeps its width.
-fn tab_min_widths(ui: &egui::Ui, style: &DockStyle, seqs: &SeqTabs, seq_width: f32) -> HashMap<PanelKind, f32> {
+/// to the group's "…" menu (whose button is counted for a panel that shares its group), but the
+/// shown tab has nowhere to go: a narrower group would cut its name with "…" (the Audio Meters
+/// column, the right-hand columns in a narrow window). The Tools column shows no tab at all and
+/// keeps its width.
+fn tab_min_widths(ui: &egui::Ui, style: &DockStyle, layout: &Layout<PanelKind>, seqs: &SeqTabs, seq_width: f32) -> HashMap<PanelKind, f32> {
+    let grouped = grouped_panels(layout);
     PanelKind::ALL
         .iter()
         .filter(|panel| **panel != PanelKind::Tools)
         .map(|&panel| {
             let label = if panel == PanelKind::Timeline && seqs.open.is_empty() { seqs.label() } else { tab_label(panel).to_string() };
             let name = ui.painter().layout_no_wrap(label, style.font.clone(), egui::Color32::WHITE).size().x.ceil();
-            let tab = name + TAB_PADDING + style.drag_bar_width;
+            let overflow = if grouped.contains(&panel) { OVERFLOW_WIDTH } else { 0.0 };
+            let tab = name + TAB_PADDING + style.drag_bar_width + overflow;
             let min = if panel == PanelKind::Timeline && !seqs.open.is_empty() { (tab + seq_width + MENU_W).min(3.0 * tab) } else { tab + MENU_W };
             (panel, min + 2.0)
         })
@@ -294,7 +324,7 @@ impl FilmcraftApp {
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(body).id_salt("filmcraft-dock-area"));
         child.set_clip_rect(body.intersect(ui.clip_rect()));
         let seq_width = dock::sequence_tabs_width(ui, &seqs);
-        let tab_min = tab_min_widths(ui, &style, &seqs, seq_width);
+        let tab_min = tab_min_widths(ui, &style, &self.ui.dock, &seqs, seq_width);
         // Known before anything draws, so header elements of a native window (the ≡ menu, the
         // Timeline's sequence tabs), drawn before its bodies, carry that window too.
         self.auto.windows =
