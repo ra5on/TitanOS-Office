@@ -1219,34 +1219,101 @@ pub fn external_commands() -> Vec<filmcraft_engine::shortcuts::CommandInfo> {
     v
 }
 
-/// Draw the in-window menu bar.
-pub fn menu_bar(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
+/// Draw the in-window menu bar → the right edge of its last title.
+pub fn menu_bar(app: &mut FilmcraftApp, ui: &mut egui::Ui) -> f32 {
+    menus(app, ui, false)
+}
+
+/// Draw the menus as one "Menü" button, each menu a submenu of it (the header in a window too
+/// narrow for the menu bar beside its quick actions) → the button's right edge.
+pub fn menu_button(app: &mut FilmcraftApp, ui: &mut egui::Ui) -> f32 {
+    menus(app, ui, true)
+}
+
+/// The style of a title in the menu bar: [`crate::theme::menu_style`] over `ui`'s.
+fn bar_style(ui: &egui::Ui) -> egui::Style {
+    let mut style = (**ui.style()).clone();
+    crate::theme::menu_style(&mut style);
+    style
+}
+
+/// The width of a row of menu titles `titles` in the bar: each title's text and button padding,
+/// and the spacing between them.
+fn titles_width<'a>(ui: &egui::Ui, titles: impl Iterator<Item = &'a str>) -> f32 {
+    let style = bar_style(ui);
+    let font = egui::TextStyle::Button.resolve(&style);
+    let (mut width, mut count) = (0.0, 0.0);
+    for title in titles {
+        width += ui.painter().layout_no_wrap(title.to_string(), font.clone(), egui::Color32::WHITE).size().x + 2.0 * style.spacing.button_padding.x;
+        count += 1.0;
+    }
+    width + style.spacing.item_spacing.x * (count - 1.0_f32).max(0.0)
+}
+
+/// The width the menu bar takes with every title: measured, or the width it took when last drawn
+/// in this language if that was more.
+pub fn menu_bar_width(app: &FilmcraftApp, ui: &egui::Ui) -> f32 {
+    let language = app.ui.language;
+    let measured = titles_width(ui, MENUS.iter().map(|top| language.tr(top)));
+    let drawn = ui.ctx().data(|d| d.get_temp::<f32>(drawn_width_id(language))).unwrap_or(0.0);
+    measured.max(drawn)
+}
+
+/// The width of the "Menü" button ([`menu_button`]).
+pub fn menu_button_width(ui: &egui::Ui) -> f32 {
+    titles_width(ui, std::iter::once(tl!("Menu")))
+}
+
+fn drawn_width_id(language: crate::i18n::Language) -> egui::Id {
+    egui::Id::unique(("menu-bar-width", language.code()))
+}
+
+fn menus(app: &mut FilmcraftApp, ui: &mut egui::Ui, compact: bool) -> f32 {
     ui.ctx().data_mut(|d| d.insert_temp(egui::Id::unique("interface-language"), app.ui.language));
     let items = menu_items_with_focus(app, ui.ctx());
     // Draw Edit ▸ Label with the user's live palette, not the baked-in label colours.
     let labels = app.session.prefs.labels.clone();
     let ctx = ui.ctx().clone();
+    let start = ui.cursor().min.x;
     let mut clicked: Option<String> = None;
+    let mut end = start;
     // The bar's titles and their menus share one size and colour, as in a native menu bar.
     egui::MenuBar::new().style(crate::theme::menu_style).config(egui::containers::menu::MenuConfig::new().style(crate::theme::menu_style)).ui(ui, |ui| {
-        let mut titles = Vec::with_capacity(MENUS.len());
-        for top in MENUS {
+        let language = app.ui.language;
+        let top_menu = |ui: &mut egui::Ui, top: &str, app: &mut FilmcraftApp, clicked: &mut Option<String>| {
             let mine: Vec<&MenuItem> = items.iter().filter(|i| i.path.first().map(String::as_str) == Some(top)).collect();
-            let r = ui.menu_button(app.ui.language.tr(top), |ui| {
+            let r = ui.menu_button(language.tr(top), |ui| {
                 ui.set_min_width(260.0);
                 if mine.is_empty() {
                     ui.add_enabled(false, egui::Button::new(tl!("(empty)")));
                 }
-                menu_level(ui, &mine, 1, &mut clicked, &mut app.auto, &labels);
+                menu_level(ui, &mine, 1, clicked, &mut app.auto, &labels);
             });
             app.auto.add(&format!("menu.{top}"), r.response.rect, top);
-            titles.push(r.response);
+            r.response
+        };
+        if compact {
+            let r = ui.menu_button(tl!("Menu"), |ui| {
+                for top in MENUS {
+                    top_menu(ui, top, app, &mut clicked);
+                }
+            });
+            app.auto.add("menu.compact", r.response.rect, "Menu");
+            end = r.response.rect.max.x;
+        } else {
+            let titles: Vec<egui::Response> = MENUS.iter().map(|top| top_menu(ui, top, app, &mut clicked)).collect();
+            end = titles.last().map_or(start, |r| r.rect.max.x);
+            switch_on_hover(ui.ctx(), &titles);
         }
-        switch_on_hover(ui.ctx(), &titles);
     });
+    if !compact {
+        let language = app.ui.language;
+        ctx.data_mut(|d| d.insert_temp(drawn_width_id(language), end - start));
+    }
     if let Some(id) = clicked {
         let _ = invoke(app, &ctx, &id, json!({}));
     }
+    end
 }
 
 /// Like a native menu bar (Windows, macOS): while one top-level menu is open, hovering another
@@ -1573,7 +1640,7 @@ mod tests {
         use egui_kittest::{Harness, kittest::Queryable};
 
         let app = FilmcraftApp::new(filmcraft_engine::Session::default());
-        let mut harness = Harness::builder().with_size(egui::vec2(1200.0, 700.0)).build_ui_state(|ui, app| menu_bar(app, ui), app);
+        let mut harness = Harness::builder().with_size(egui::vec2(1200.0, 700.0)).build_ui_state(|ui, app| { menu_bar(app, ui); }, app);
         // the app's fonts, which draw the macOS shortcut symbols (⇧⌘S) egui's default fonts lack
         crate::theme::install(&harness.ctx, &harness.state().tokens);
         harness.run_steps(3);

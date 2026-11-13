@@ -7,7 +7,8 @@
 use std::collections::HashMap;
 
 use craft_ui::docking::{
-    Action, Divider, DockArea, DockCommand, DockContent, DockEvent, DockStyle, FloatSpace, Hit, Layout, Node, ResizeEdge, WindowKind, Workspace,
+    Action, Divider, DockArea, DockCommand, DockContent, DockEvent, DockStyle, FloatSpace, Hit, Layout, Node, PanelLimits, ResizeEdge, WindowKind,
+    Workspace,
 };
 use egui::{Rect, Sense, Stroke, StrokeKind, vec2};
 use serde_json::{Value, json};
@@ -29,6 +30,36 @@ fn bodies_id() -> egui::Id {
 
 /// Width of the ≡ panel menu button at the end of each tab strip.
 const MENU_W: f32 = 26.0;
+
+/// The room craft-ui gives a tab beside its name (its `TAB_PADDING`, which it does not export).
+const TAB_PADDING: f32 = 24.0;
+
+/// A panel's name on its tab, in the interface language. The German Audio Meters tab is one short
+/// word ("Pegel") because its column beside the Timeline is narrow; the Window menu keeps
+/// "Audiopegel".
+fn tab_label(panel: PanelKind) -> &'static str {
+    crate::i18n::tr_ctx("panel tab", panel.title())
+}
+
+/// The narrowest each panel's group is drawn, so that its tab shows the whole name whenever the
+/// panel is the one shown: the name, the tab's padding, the drag bar and the ≡ menu, and for the
+/// Timeline its sequence tabs, which take at most two thirds of the strip. Tabs that do not fit go
+/// to the group's "…" menu, but the shown tab has nowhere to go: a narrower group would cut its
+/// name with "…" (the Audio Meters column, the right-hand columns in a narrow window). The Tools
+/// column shows no tab at all and keeps its width.
+fn tab_min_widths(ui: &egui::Ui, style: &DockStyle, seqs: &SeqTabs, seq_width: f32) -> HashMap<PanelKind, f32> {
+    PanelKind::ALL
+        .iter()
+        .filter(|panel| **panel != PanelKind::Tools)
+        .map(|&panel| {
+            let label = if panel == PanelKind::Timeline && seqs.open.is_empty() { seqs.label() } else { tab_label(panel).to_string() };
+            let name = ui.painter().layout_no_wrap(label, style.font.clone(), egui::Color32::WHITE).size().x.ceil();
+            let tab = name + TAB_PADDING + style.drag_bar_width;
+            let min = if panel == PanelKind::Timeline && !seqs.open.is_empty() { (tab + seq_width + MENU_W).min(3.0 * tab) } else { tab + MENU_W };
+            (panel, min + 2.0)
+        })
+        .collect()
+}
 
 pub(crate) fn route(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if id == "window.dockAction" {
@@ -263,6 +294,7 @@ impl FilmcraftApp {
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(body).id_salt("filmcraft-dock-area"));
         child.set_clip_rect(body.intersect(ui.clip_rect()));
         let seq_width = dock::sequence_tabs_width(ui, &seqs);
+        let tab_min = tab_min_widths(ui, &style, &seqs, seq_width);
         // Known before anything draws, so header elements of a native window (the ≡ menu, the
         // Timeline's sequence tabs), drawn before its bodies, carry that window too.
         self.auto.windows =
@@ -271,6 +303,7 @@ impl FilmcraftApp {
             app: self,
             seqs,
             seq_width,
+            tab_min,
             tokens: t,
             seq_actions: Vec::new(),
             menu: None,
@@ -485,6 +518,8 @@ struct FilmContent<'a> {
     seqs: SeqTabs,
     /// The width the sequence tabs take in the Timeline's tab strip.
     seq_width: f32,
+    /// Each panel's narrowest group width ([`tab_min_widths`]).
+    tab_min: HashMap<PanelKind, f32>,
     tokens: Tokens,
     seq_actions: Vec<SeqAction>,
     /// The ≡ button clicked: its panel and where its menu opens.
@@ -532,7 +567,12 @@ impl DockContent<PanelKind> for FilmContent<'_> {
     }
 
     fn logical_label(&self, panel: &PanelKind) -> String {
-        crate::i18n::t(panel.title()).to_string()
+        tab_label(*panel).to_string()
+    }
+
+    /// A group is never narrower than the whole name of the tab it shows ([`tab_min_widths`]).
+    fn limits(&self, panel: &PanelKind) -> PanelLimits {
+        PanelLimits { min: vec2(self.tab_min.get(panel).copied().unwrap_or(0.0), 0.0), ..PanelLimits::default() }
     }
 
     /// Every floating panel gets its own OS window on desktop.

@@ -3687,3 +3687,11 @@
 	H.264 High 10 Intra	H.264 High 10 Intra
 	H.264 High 10 (10-bit 4:2:0) at the sequence's size, constant quality CRF 16, AAC 320 kbps; a 10-bit master	H.264 High 10 (10 Bit 4:2:0) in der Größe der Sequenz, konstante Qualität CRF 16, AAC 320 kbps; ein 10-Bit-Master
 	H.264 High 10 Intra (10-bit 4:2:0, every frame a keyframe), CRF 12, AAC 320 kbps; an edit-friendly intermediate	H.264 High 10 Intra (10 Bit 4:2:0, jedes Bild ein Keyframe), CRF 12, AAC 320 kbps; ein schnittfreundliches Zwischenformat
+
+# The header in a narrow window: the menus as one button, the quick actions without room in a "⋯" menu.
+	Menu	Menü
+	More	Mehr
+
+# Rows for one place only (context in the first column).
+# The Audio Meters tab: its column beside the Timeline is narrow, so the tab is one short word.
+panel tab	Audio Meters	Pegel
