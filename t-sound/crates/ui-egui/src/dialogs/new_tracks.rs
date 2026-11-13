@@ -240,7 +240,11 @@ impl NewTracks {
                     if ui.add_enabled(len > 1, egui::Button::new("−").min_size(size)).on_hover_text(crate::i18n::tr("Remove this row")).clicked() {
                         remove = Some(index);
                     }
-                    if ui.add_enabled(len < MAX_TRACKS, egui::Button::new("+").min_size(size)).on_hover_text(crate::i18n::tr("Add a row below")).clicked() {
+                    if ui
+                        .add_enabled(len < MAX_TRACKS, egui::Button::new("+").min_size(size))
+                        .on_hover_text(crate::i18n::tr("Add a row below"))
+                        .clicked()
+                    {
                         insert = Some(index);
                     }
                 });

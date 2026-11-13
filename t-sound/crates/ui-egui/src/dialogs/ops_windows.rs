@@ -158,8 +158,10 @@ fn tempo_ops(app: &mut SoundApp, ctx: &egui::Context) {
                 ui.selectable_value(&mut app.ops.tempo_curve, c.to_string(), crate::i18n::tr(c));
             }
         });
-        ui.add(egui::DragValue::new(&mut app.ops.tempo_start).range(5.0..=999.0).prefix(crate::i18n::tr("start bpm "))).accessible_name(crate::i18n::tr("Start tempo (BPM)"));
-        ui.add(egui::DragValue::new(&mut app.ops.tempo_end).range(5.0..=999.0).prefix(crate::i18n::tr("end bpm "))).accessible_name(crate::i18n::tr("End tempo (BPM)"));
+        ui.add(egui::DragValue::new(&mut app.ops.tempo_start).range(5.0..=999.0).prefix(crate::i18n::tr("start bpm ")))
+            .accessible_name(crate::i18n::tr("Start tempo (BPM)"));
+        ui.add(egui::DragValue::new(&mut app.ops.tempo_end).range(5.0..=999.0).prefix(crate::i18n::tr("end bpm ")))
+            .accessible_name(crate::i18n::tr("End tempo (BPM)"));
         ui.label(
             egui::RichText::new(crate::i18n::tr(
                 "Applies across the edit selection (constant: at the insertion point; scale: factor = end / start; stretch: factor = start / end).",
@@ -202,7 +204,8 @@ fn time_ops(app: &mut SoundApp, ctx: &egui::Context) {
                 });
             }
             "insert" => {
-                ui.add(egui::DragValue::new(&mut app.ops.time_seconds).range(0.0..=3600.0).suffix(" s")).accessible_name(crate::i18n::tr("Time (seconds)"));
+                ui.add(egui::DragValue::new(&mut app.ops.time_seconds).range(0.0..=3600.0).suffix(" s"))
+                    .accessible_name(crate::i18n::tr("Time (seconds)"));
             }
             _ => {
                 ui.label(egui::RichText::new(crate::i18n::tr("Uses the edit selection.")).small());

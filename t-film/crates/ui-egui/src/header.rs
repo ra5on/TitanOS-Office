@@ -275,8 +275,7 @@ enum Quick {
 }
 
 /// The quick actions from the right edge leftwards; the last ones go to the "⋯" button first.
-const QUICK_ACTIONS: [Quick; 7] =
-    [Quick::Fullscreen, Quick::Volume, Quick::Search, Quick::Progress, Quick::QuickExport, Quick::Appearance, Quick::Workspaces];
+const QUICK_ACTIONS: [Quick; 7] = [Quick::Fullscreen, Quick::Volume, Quick::Search, Quick::Progress, Quick::QuickExport, Quick::Appearance, Quick::Workspaces];
 
 impl Quick {
     /// The automation id (`header.<id>`).

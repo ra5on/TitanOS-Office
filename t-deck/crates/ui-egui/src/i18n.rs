@@ -351,9 +351,15 @@ const DE: &[(&str, &str)] = &[
     ("Set", "Festlegen"),
     ("Clear All", "Alle löschen"),
     // About
-    ("Presentations and slide shows, rebuilt from scratch in pure Rust.", "Präsentationen und Bildschirmpräsentationen, von Grund auf neu in reinem Rust gebaut."),
+    (
+        "Presentations and slide shows, rebuilt from scratch in pure Rust.",
+        "Präsentationen und Bildschirmpräsentationen, von Grund auf neu in reinem Rust gebaut.",
+    ),
     ("An open-source, clean-room project. Not affiliated with Microsoft.", "Ein quelloffenes Clean-Room-Projekt. Nicht mit Microsoft verbunden."),
-    ("Part of TitanOS: a modified version of DeckCraft (MIT OR Apache-2.0).", "Teil von TitanOS: eine veränderte Fassung von DeckCraft (MIT OR Apache-2.0)."),
+    (
+        "Part of TitanOS: a modified version of DeckCraft (MIT OR Apache-2.0).",
+        "Teil von TitanOS: eine veränderte Fassung von DeckCraft (MIT OR Apache-2.0).",
+    ),
     ("Source code: github.com/ra5on/TitanOS-Office", "Quellcode: github.com/ra5on/TitanOS-Office"),
     ("Contributors", "Mitwirkende"),
     ("Models", "Modelle"),
@@ -435,16 +441,25 @@ const DE: &[(&str, &str)] = &[
     ("End Show", "Präsentation beenden"),
     ("Custom Show…", "Zielgruppenorientierte Präsentation…"),
     ("Slide…", "Folie…"),
-    ("This presentation has no custom shows (Slide Show ▸ Custom Slide Show).", "Diese Präsentation hat keine zielgruppenorientierten Präsentationen (Bildschirmpräsentation ▸ Zielgruppenorientierte Präsentation)."),
+    (
+        "This presentation has no custom shows (Slide Show ▸ Custom Slide Show).",
+        "Diese Präsentation hat keine zielgruppenorientierten Präsentationen (Bildschirmpräsentation ▸ Zielgruppenorientierte Präsentation).",
+    ),
     ("Run program:", "Programm ausführen:"),
     ("Program:", "Programm:"),
     ("Play the shape's media", "Medien der Form wiedergeben"),
     ("Highlight click", "Klick hervorheben"),
     // Alt Text, Outline, Reuse Slides, Rename
-    ("How would you describe this object and its context to someone who is blind or has low vision?", "Wie würdest du dieses Objekt und seinen Kontext jemandem beschreiben, der blind ist oder eine Sehbehinderung hat?"),
+    (
+        "How would you describe this object and its context to someone who is blind or has low vision?",
+        "Wie würdest du dieses Objekt und seinen Kontext jemandem beschreiben, der blind ist oder eine Sehbehinderung hat?",
+    ),
     ("Alt text", "Alternativtext"),
     ("Mark as decorative", "Als dekorativ markieren"),
-    ("Paste or type an outline. Unindented lines become slide titles; tab-indented lines become bullets.", "Füge eine Gliederung ein oder tippe sie. Nicht eingerückte Zeilen werden Folientitel, mit Tab eingerückte Zeilen Aufzählungspunkte."),
+    (
+        "Paste or type an outline. Unindented lines become slide titles; tab-indented lines become bullets.",
+        "Füge eine Gliederung ein oder tippe sie. Nicht eingerückte Zeilen werden Folientitel, mit Tab eingerückte Zeilen Aufzählungspunkte.",
+    ),
     ("Outline", "Gliederung"),
     ("Insert slides from {name} after the current slide:", "Folien aus {name} nach der aktuellen Folie einfügen:"),
     ("{n}  (no title)", "{n}  (ohne Titel)"),
@@ -498,7 +513,10 @@ const DE: &[(&str, &str)] = &[
     ("Math", "Mathematik"),
     ("Greek", "Griechisch"),
     ("Arrows", "Pfeile"),
-    ("Type an equation in linear form (e.g. a^2+b^2=c^2, x=(-b±√(b^2-4ac))/2a).", "Formel in linearer Form eingeben (z. B. a^2+b^2=c^2, x=(-b±√(b^2-4ac))/2a)."),
+    (
+        "Type an equation in linear form (e.g. a^2+b^2=c^2, x=(-b±√(b^2-4ac))/2a).",
+        "Formel in linearer Form eingeben (z. B. a^2+b^2=c^2, x=(-b±√(b^2-4ac))/2a).",
+    ),
     ("Use Destination Theme", "Zieldesign verwenden"),
     ("Keep Source Formatting", "Ursprüngliche Formatierung beibehalten"),
     ("Picture (PNG)", "Bild (PNG)"),
@@ -506,7 +524,10 @@ const DE: &[(&str, &str)] = &[
     ("As:", "Als:"),
     // Spelling, Accessibility, Language
     ("Dictionary: {name}", "Wörterbuch: {name}"),
-    ("No {lang} dictionary is installed, so only common misspellings are found. Put a Hunspell .aff/.dic pair in {folder}.", "Für {lang} ist kein Wörterbuch installiert, deshalb werden nur häufige Tippfehler gefunden. Lege ein Hunspell-Paar .aff/.dic in {folder} ab."),
+    (
+        "No {lang} dictionary is installed, so only common misspellings are found. Put a Hunspell .aff/.dic pair in {folder}.",
+        "Für {lang} ist kein Wörterbuch installiert, deshalb werden nur häufige Tippfehler gefunden. Lege ein Hunspell-Paar .aff/.dic in {folder} ab.",
+    ),
     ("a dictionaries folder", "einen Wörterbuchordner"),
     ("The spelling check is complete. No issues found.", "Die Rechtschreibprüfung ist abgeschlossen. Keine Probleme gefunden."),
     ("Slide {n}: “{word}”", "Folie {n}: „{word}“"),
@@ -517,7 +538,10 @@ const DE: &[(&str, &str)] = &[
     ("Change to:", "Ändern in:"),
     ("Click to change this one; Shift-click to change all", "Klicken ändert dieses, Umschalt+Klick alle"),
     ("No suggestions", "Keine Vorschläge"),
-    ("No accessibility issues found. People with disabilities should not have difficulty reading this document.", "Keine Probleme mit der Barrierefreiheit gefunden. Menschen mit Behinderungen sollten dieses Dokument ohne Schwierigkeiten lesen können."),
+    (
+        "No accessibility issues found. People with disabilities should not have difficulty reading this document.",
+        "Keine Probleme mit der Barrierefreiheit gefunden. Menschen mit Behinderungen sollten dieses Dokument ohne Schwierigkeiten lesen können.",
+    ),
     ("Slide {n}: {issue}", "Folie {n}: {issue}"),
     ("Missing slide title", "Folientitel fehlt"),
     ("Missing alternative text", "Alternativtext fehlt"),
@@ -535,7 +559,10 @@ const DE: &[(&str, &str)] = &[
     ("Custom Show", "Zielgruppenorientierte Präsentation"),
     ("{name} ({n} slides)", "{name} ({n} Folien)"),
     ("Select a chart first.", "Zuerst ein Diagramm auswählen."),
-    ("Edit the data: first row = series names, first column = categories.", "Daten bearbeiten: erste Zeile = Reihennamen, erste Spalte = Kategorien."),
+    (
+        "Edit the data: first row = series names, first column = categories.",
+        "Daten bearbeiten: erste Zeile = Reihennamen, erste Spalte = Kategorien.",
+    ),
     ("Chart cell", "Diagrammzelle"),
     ("+ Row", "+ Zeile"),
     ("+ Series", "+ Reihe"),
@@ -586,7 +613,10 @@ const DE: &[(&str, &str)] = &[
     ("German (Germany)", "Deutsch (Deutschland)"),
     ("Available formats:", "Verfügbare Formate:"),
     ("Language:", "Sprache:"),
-    ("Month names and AM/PM are listed for English. Other languages list the numeric date and 24-hour time.", "Monatsnamen und AM/PM gibt es für Englisch. Andere Sprachen zeigen das Datum in Ziffern und die Uhrzeit im 24-Stunden-Format."),
+    (
+        "Month names and AM/PM are listed for English. Other languages list the numeric date and 24-hour time.",
+        "Monatsnamen und AM/PM gibt es für Englisch. Andere Sprachen zeigen das Datum in Ziffern und die Uhrzeit im 24-Stunden-Format.",
+    ),
     ("Update automatically", "Automatisch aktualisieren"),
     // Find and Replace
     ("Find what:", "Suchen nach:"),
@@ -663,7 +693,10 @@ const DE: &[(&str, &str)] = &[
     ("Alignment:", "Ausrichtung:"),
     // Photo Album
     ("Pass pictures to insert.photoAlbum", "Bilder an insert.photoAlbum übergeben"),
-    ("The web build inserts album pictures from data passed to insert.photoAlbum", "Die Web-Fassung fügt Albumbilder aus Daten ein, die an insert.photoAlbum übergeben werden"),
+    (
+        "The web build inserts album pictures from data passed to insert.photoAlbum",
+        "Die Web-Fassung fügt Albumbilder aus Daten ein, die an insert.photoAlbum übergeben werden",
+    ),
     ("That file is empty", "Diese Datei ist leer"),
     ("That picture is larger than 32 MB", "Dieses Bild ist größer als 32 MB"),
     ("Pictures in album", "Bilder im Album"),

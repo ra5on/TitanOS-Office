@@ -38,7 +38,10 @@ fn audio_health(app: &mut SoundApp, ctx: &egui::Context) {
         let Some(result) = &app.audio_health_report else { return };
         match result {
             Ok(report) => {
-                ui.label(crate::i18n::fill("{clips} audio clips checked · {issues} issues", &[("clips", &report["audio_clips"].to_string()), ("issues", &report["issue_count"].to_string())]));
+                ui.label(crate::i18n::fill(
+                    "{clips} audio clips checked · {issues} issues",
+                    &[("clips", &report["audio_clips"].to_string()), ("issues", &report["issue_count"].to_string())],
+                ));
                 ui.label(match report["active_audio_end_seconds"].as_f64() {
                     Some(seconds) => crate::i18n::fill("Active audio ends at {seconds} seconds", &[("seconds", &format!("{seconds:.2}"))]),
                     None => crate::i18n::tr("Active audio end time is unknown (invalid session sample rate)").into(),
@@ -158,7 +161,10 @@ fn disk_usage(app: &mut SoundApp, ctx: &egui::Context) {
     win(ctx, &mut open, "Disk Usage", vec2(360.0, 160.0), |ui| {
         let s = app.engine.session();
         let bytes: u64 = s.sources.iter().map(|x| x.frames * u64::from(x.channels) * 4).sum();
-        ui.label(crate::i18n::fill("Session media: {n} files, {mb} MB in memory (32-bit float)", &[("n", &s.sources.len().to_string()), ("mb", &format!("{:.1}", bytes as f64 / 1_048_576.0))]));
+        ui.label(crate::i18n::fill(
+            "Session media: {n} files, {mb} MB in memory (32-bit float)",
+            &[("n", &s.sources.len().to_string()), ("mb", &format!("{:.1}", bytes as f64 / 1_048_576.0))],
+        ));
         let per_min = f64::from(s.sample_rate.hz()) * 60.0 * 3.0 / 1_048_576.0;
         ui.label(crate::i18n::fill("Recording at 24-bit uses {mb} MB per mono track-minute", &[("mb", &format!("{per_min:.1}"))]));
         if let Some(p) = &app.engine.path {
@@ -172,7 +178,13 @@ fn system_usage(app: &mut SoundApp, ctx: &egui::Context) {
     let mut open = app.ui.show_system_usage;
     win(ctx, &mut open, "System Usage", vec2(320.0, 140.0), |ui| {
         ui.label(crate::i18n::fill("UI frame time: {ms} ms", &[("ms", &format!("{:.1}", app.frame_ms))]));
-        ui.label(crate::i18n::fill("Audio: {device}", &[("device", &app.player.as_ref().map_or(crate::i18n::tr("no engine").to_string(), |p| format!("{} @ {} Hz", p.device_name, p.device_rate)))]));
+        ui.label(crate::i18n::fill(
+            "Audio: {device}",
+            &[(
+                "device",
+                &app.player.as_ref().map_or(crate::i18n::tr("no engine").to_string(), |p| format!("{} @ {} Hz", p.device_name, p.device_rate)),
+            )],
+        ));
         let plugins: usize = app.engine.session().tracks.iter().map(|t| t.mixer.inserts.iter().flatten().count()).sum();
         ui.label(crate::i18n::fill("Active plugin instances: {n}", &[("n", &plugins.to_string())]));
         ui.label(crate::i18n::fill("Tracks: {n}", &[("n", &app.engine.session().tracks.len().to_string())]));
@@ -186,7 +198,10 @@ fn task_manager(app: &mut SoundApp, ctx: &egui::Context) {
     win(ctx, &mut open, "Task Manager", vec2(320.0, 120.0), |ui| {
         match &app.bounce {
             Some(b) => {
-                ui.label(crate::i18n::fill("Bouncing {name} ({percent}%)", &[("name", &b.path().display().to_string()), ("percent", &format!("{:.0}", b.progress() * 100.0))]));
+                ui.label(crate::i18n::fill(
+                    "Bouncing {name} ({percent}%)",
+                    &[("name", &b.path().display().to_string()), ("percent", &format!("{:.0}", b.progress() * 100.0))],
+                ));
                 ui.add(egui::ProgressBar::new(b.progress()));
             }
             None => {
@@ -194,7 +209,9 @@ fn task_manager(app: &mut SoundApp, ctx: &egui::Context) {
             }
         }
         ui.label(
-            egui::RichText::new(crate::i18n::tr("Renders and AudioSuite processes run to completion before returning.")).small().color(Tokens::current().text_dim),
+            egui::RichText::new(crate::i18n::tr("Renders and AudioSuite processes run to completion before returning."))
+                .small()
+                .color(Tokens::current().text_dim),
         );
     });
     app.ui.show_task_manager = open;
@@ -535,7 +552,11 @@ pub fn playback_engine(app: &mut SoundApp, ctx: &egui::Context) {
                 refresh = true;
             }
             let changed = draft != app.ui.audio;
-            if ui.add_enabled(changed, egui::Button::new(crate::i18n::tr("Apply"))).on_hover_text(crate::i18n::tr("Reopen the audio devices with these settings")).clicked() {
+            if ui
+                .add_enabled(changed, egui::Button::new(crate::i18n::tr("Apply")))
+                .on_hover_text(crate::i18n::tr("Reopen the audio devices with these settings"))
+                .clicked()
+            {
                 apply = true;
             }
             if changed && ui.button(crate::i18n::tr("Revert")).clicked() {
@@ -549,7 +570,9 @@ pub fn playback_engine(app: &mut SoundApp, ctx: &egui::Context) {
                 if p.silent {
                     crate::i18n::tr("no device (silent clock)").to_string()
                 } else {
-                    let buf = p.device_buffer.map_or(crate::i18n::tr("default buffer").to_string(), |b| crate::i18n::fill("{n} samples", &[("n", &b.to_string())]));
+                    let buf = p
+                        .device_buffer
+                        .map_or(crate::i18n::tr("default buffer").to_string(), |b| crate::i18n::fill("{n} samples", &[("n", &b.to_string())]));
                     format!("{} · {} Hz · {} ch · {buf}", p.device_name, p.device_rate, p.device_channels)
                 }
             }));
@@ -569,7 +592,11 @@ pub fn playback_engine(app: &mut SoundApp, ctx: &egui::Context) {
             ui.label(format!("{sr} Hz{note}"));
             ui.end_row();
         });
-        ui.label(egui::RichText::new(crate::i18n::tr("The mix runs in 512-sample blocks; the buffer size sets the device's own latency.")).small().color(t.text_dim));
+        ui.label(
+            egui::RichText::new(crate::i18n::tr("The mix runs in 512-sample blocks; the buffer size sets the device's own latency."))
+                .small()
+                .color(t.text_dim),
+        );
         let mut dc = app.engine.session().edit.delay_compensation;
         if crate::widgets::checkbox(ui, &mut dc, crate::i18n::tr("Delay compensation")).changed() {
             let _ = app.run("options.delay_compensation", json!({"value": dc}));
@@ -721,7 +748,10 @@ pub fn io_setup(app: &mut SoundApp, ctx: &egui::Context) {
             ui.label(egui::RichText::new(format!("{} ch", main.channels())).small());
         });
         for o in app.engine.session().outputs.clone() {
-            ui.label(format!("{} — {} from channel {}", o.name, o.format.label(), o.first_channel + 1));
+            ui.label(crate::i18n::fill(
+                "{name} — {format} from channel {n}",
+                &[("name", &o.name), ("format", o.format.label()), ("n", &(o.first_channel + 1).to_string())],
+            ));
         }
     });
     app.ui.show_io_setup = open;

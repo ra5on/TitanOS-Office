@@ -23,8 +23,13 @@ pub(super) fn about(app: &mut SoundApp, ctx: &egui::Context) {
             2 => crate::credits::models_ui(ui),
             _ => {
                 ui.label(egui::RichText::new(crate::i18n::tr("T-Sound")).font(bold(22.0)));
-                ui.label(crate::i18n::fill("Version {version}", &[("version", option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")))]));
-                ui.label(crate::i18n::tr("An open-source digital audio workstation. Part of TitanOS: a modified version of SoundCraft (MIT OR Apache-2.0)."));
+                ui.label(crate::i18n::fill(
+                    "Version {version}",
+                    &[("version", option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")))],
+                ));
+                ui.label(crate::i18n::tr(
+                    "An open-source digital audio workstation. Part of TitanOS: a modified version of SoundCraft (MIT OR Apache-2.0).",
+                ));
                 ui.label(crate::i18n::tr("Dual-licensed MIT OR Apache-2.0. Made with Rust and egui."));
                 ui.hyperlink_to(crate::i18n::tr("Source code: github.com/ra5on/TitanOS-Office"), "https://github.com/ra5on/TitanOS-Office");
                 ui.hyperlink_to(crate::i18n::tr("Original: github.com/storytold/soundcraft"), "https://github.com/storytold/soundcraft");

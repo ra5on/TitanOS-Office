@@ -103,8 +103,10 @@ pub(super) fn paragraph_dialog(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) 
         let field = super::label_cell(ui, crate::i18n::tr("Line spacing"), 110.0, 20.0);
         let kind = d.get("lineKind", "multiple");
         let value = d.get("lineValue", "1");
-        let combo =
-            craft_ui::ComboBox::from_id_salt("paragraph_line").selected_text(crate::i18n::tr(line_preset_label(&kind, &value))).width(140.0).show_ui(ui, |ui| {
+        let combo = craft_ui::ComboBox::from_id_salt("paragraph_line")
+            .selected_text(crate::i18n::tr(line_preset_label(&kind, &value)))
+            .width(140.0)
+            .show_ui(ui, |ui| {
                 for (label, k, v) in [
                     ("Single", "multiple", Some("1")),
                     ("1.5 lines", "multiple", Some("1.5")),

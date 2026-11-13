@@ -122,7 +122,8 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
 /// availability), each wrapped and centred onto as many lines as it needs: never cut short.
 fn tile_text(ui: &egui::Ui, t: &Tokens, g: &ToolGroup, items: &[&'static str]) -> (Arc<egui::Galley>, Option<(Arc<egui::Galley>, Color32)>) {
     let ready = g.availability == Availability::Ready;
-    let mut job = egui::text::LayoutJob::simple(tl!(g.label).to_owned(), theme::medium(13.0), if ready { t.text } else { t.text_muted }, TILE.x - 16.0);
+    let mut job =
+        egui::text::LayoutJob::simple(tl!(g.label).to_owned(), theme::medium(13.0), if ready { t.text } else { t.text_muted }, TILE.x - 16.0);
     job.halign = egui::Align::Center;
     let title = ui.fonts_mut(|f| f.layout_job(job));
     // What found the tool, or else whether it works today.

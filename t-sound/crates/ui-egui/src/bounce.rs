@@ -28,16 +28,14 @@ pub fn step(app: &mut SoundApp, ctx: &egui::Context) {
             ctx.request_repaint();
             return;
         }
-        Ok(Some(done)) => {
-            crate::i18n::fill(
-                "Bounced {name} (peak {peak} dBFS, {lufs} LUFS)",
-                &[
-                    ("name", &job.path().file_name().unwrap_or_default().to_string_lossy()),
-                    ("peak", &format!("{:.1}", done.peak_db)),
-                    ("lufs", &format!("{:.1}", done.lufs)),
-                ],
-            )
-        }
+        Ok(Some(done)) => crate::i18n::fill(
+            "Bounced {name} (peak {peak} dBFS, {lufs} LUFS)",
+            &[
+                ("name", &job.path().file_name().unwrap_or_default().to_string_lossy()),
+                ("peak", &format!("{:.1}", done.peak_db)),
+                ("lufs", &format!("{:.1}", done.lufs)),
+            ],
+        ),
         Err(e) => e.to_string(),
     };
     app.bounce = None;

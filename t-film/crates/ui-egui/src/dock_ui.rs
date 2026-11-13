@@ -7,8 +7,7 @@
 use std::collections::HashMap;
 
 use craft_ui::docking::{
-    Action, Divider, DockArea, DockCommand, DockContent, DockEvent, DockStyle, FloatSpace, Hit, Layout, Node, PanelLimits, ResizeEdge, WindowKind,
-    Workspace,
+    Action, Divider, DockArea, DockCommand, DockContent, DockEvent, DockStyle, FloatSpace, Hit, Layout, Node, PanelLimits, ResizeEdge, WindowKind, Workspace,
 };
 use egui::{Rect, Sense, Stroke, StrokeKind, vec2};
 use serde_json::{Value, json};

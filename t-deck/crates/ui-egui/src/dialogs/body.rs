@@ -101,15 +101,18 @@ fn dlg_slide_size(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bool {
     }
     let label = ui.label(crate::i18n::tr("Slides sized for:"));
     let preset = d.get("preset", "");
-    let combo = craft_ui::ComboBox::from_id_salt("sizes").selected_text(crate::i18n::tr(if preset.is_empty() { "Custom" } else { &preset })).show_ui(ui, |ui| {
-        for (label, w, h) in deckcraft_model::defaults::SLIDE_SIZES {
-            if ui.selectable_label(preset == *label, crate::i18n::tr(label)).clicked() {
-                d.fields.insert("preset".into(), label.to_string());
-                put_slide_dim(d, "w", *w, ppu);
-                put_slide_dim(d, "h", *h, ppu);
+    let combo = craft_ui::ComboBox::from_id_salt("sizes").selected_text(crate::i18n::tr(if preset.is_empty() { "Custom" } else { &preset })).show_ui(
+        ui,
+        |ui| {
+            for (label, w, h) in deckcraft_model::defaults::SLIDE_SIZES {
+                if ui.selectable_label(preset == *label, crate::i18n::tr(label)).clicked() {
+                    d.fields.insert("preset".into(), label.to_string());
+                    put_slide_dim(d, "w", *w, ppu);
+                    put_slide_dim(d, "h", *h, ppu);
+                }
             }
-        }
-    });
+        },
+    );
     let _ = combo.response.labelled_by(label.id);
     let abbr = unit_abbr(len);
     let (w_seed, h_seed) = (field_of(d, "w"), field_of(d, "h"));
@@ -292,7 +295,8 @@ fn dlg_quit(app: &mut SlideApp, ui: &mut Ui, _d: &mut Dialog) -> bool {
         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         return true;
     }
-    let what = if names.len() == 1 { format!("“{}”", names[0]) } else { crate::i18n::fill("{n} presentations", &[("n", &names.len().to_string())]) };
+    let what =
+        if names.len() == 1 { format!("“{}”", names[0]) } else { crate::i18n::fill("{n} presentations", &[("n", &names.len().to_string())]) };
     ui.label(egui::RichText::new(crate::i18n::fill("Do you want to save the changes you made to {what}?", &[("what", &what)])).strong());
     ui.label(crate::i18n::tr("Your changes will be lost if you don't save them."));
     ui.add_space(8.0);
@@ -306,7 +310,8 @@ fn dlg_quit(app: &mut SlideApp, ui: &mut Ui, _d: &mut Dialog) -> bool {
             done = true;
         }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let save = ui.add(egui::Button::new(egui::RichText::new(crate::i18n::tr("Save")).color(t.accent_text)).fill(t.accent).min_size(vec2(72.0, 24.0)));
+            let save = ui
+                .add(egui::Button::new(egui::RichText::new(crate::i18n::tr("Save")).color(t.accent_text)).fill(t.accent).min_size(vec2(72.0, 24.0)));
             if save.clicked() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                 if app.save_all() {
                     app.quit_confirmed = true;
@@ -336,7 +341,8 @@ fn dlg_close(app: &mut SlideApp, ui: &mut Ui, _d: &mut Dialog) -> bool {
             done = true;
         }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let save = ui.add(egui::Button::new(egui::RichText::new(crate::i18n::tr("Save")).color(t.accent_text)).fill(t.accent).min_size(vec2(72.0, 24.0)));
+            let save = ui
+                .add(egui::Button::new(egui::RichText::new(crate::i18n::tr("Save")).color(t.accent_text)).fill(t.accent).min_size(vec2(72.0, 24.0)));
             if save.clicked() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                 app.save();
                 // In the browser a save is a download: the presentation stays "unsaved". A page
@@ -662,7 +668,11 @@ fn dlg_reuse_slides(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bool {
     egui::ScrollArea::vertical().max_height(260.0).show(ui, |ui| {
         for (i, title) in &slides {
             let mut on = !off(d, *i);
-            let label = if title.trim().is_empty() { crate::i18n::fill("{n}  (no title)", &[("n", &(i + 1).to_string())]) } else { format!("{}  {}", i + 1, title.trim()) };
+            let label = if title.trim().is_empty() {
+                crate::i18n::fill("{n}  (no title)", &[("n", &(i + 1).to_string())])
+            } else {
+                format!("{}  {}", i + 1, title.trim())
+            };
             if ui.checkbox(&mut on, label).changed() {
                 if on {
                     d.fields.remove(&format!("off{i}"));
@@ -843,7 +853,11 @@ fn dlg_replace_fonts(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bool {
     let (ok, cancel) = buttons(ui, "Replace");
     if ok && !from.is_empty() && !to.trim().is_empty() {
         let n = app.run("font.replace", json!({"from": from, "to": to.trim()})).ok().and_then(|v| v["replaced"].as_u64()).unwrap_or(0);
-        let msg = if n == 0 { crate::i18n::fill("“{from}” isn't used explicitly.", &[("from", &from)]) } else { crate::i18n::fill("Replaced “{from}” with “{to}”.", &[("from", &from), ("to", to.trim())]) };
+        let msg = if n == 0 {
+            crate::i18n::fill("“{from}” isn't used explicitly.", &[("from", &from)])
+        } else {
+            crate::i18n::fill("Replaced “{from}” with “{to}”.", &[("from", &from), ("to", to.trim())])
+        };
         d.fields.insert("result".into(), msg);
         d.fields.remove("from");
         // Stay open, like PowerPoint, so several fonts can be replaced in a row.
@@ -928,10 +942,14 @@ fn dlg_spelling(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bool {
     let info = app.session.execute("review.dictionary", &json!({})).unwrap_or_default();
     let available = info.get("available").and_then(Value::as_bool).unwrap_or(false);
     match info.get("found").and_then(Value::as_str) {
-        Some(f) if available => ui.label(egui::RichText::new(crate::i18n::fill("Dictionary: {name}", &[("name", f.rsplit(['/', '\\']).next().unwrap_or(f))])).small().weak()),
-        _ if available => {
-            ui.label(egui::RichText::new(crate::i18n::fill("Dictionary: {name}", &[("name", info.get("lang").and_then(Value::as_str).unwrap_or(""))])).small().weak())
-        }
+        Some(f) if available => ui.label(
+            egui::RichText::new(crate::i18n::fill("Dictionary: {name}", &[("name", f.rsplit(['/', '\\']).next().unwrap_or(f))])).small().weak(),
+        ),
+        _ if available => ui.label(
+            egui::RichText::new(crate::i18n::fill("Dictionary: {name}", &[("name", info.get("lang").and_then(Value::as_str).unwrap_or(""))]))
+                .small()
+                .weak(),
+        ),
         _ => ui.label(
             egui::RichText::new(crate::i18n::fill(
                 "No {lang} dictionary is installed, so only common misspellings are found. Put a Hunspell .aff/.dic pair in {folder}.",

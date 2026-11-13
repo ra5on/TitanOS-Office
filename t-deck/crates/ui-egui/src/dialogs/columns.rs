@@ -7,7 +7,8 @@ fn columns_value(d: &Dialog, shown_count: &str, shown_spacing: &str) -> Result<O
     let mut p = serde_json::Map::new();
     let count = field_of(d, "count");
     if count != shown_count {
-        let n = count.trim().parse::<u32>().ok().filter(|n| (1..=16).contains(n)).ok_or(crate::i18n::tr("Number must be a whole number from 1 to 16"))?;
+        let n =
+            count.trim().parse::<u32>().ok().filter(|n| (1..=16).contains(n)).ok_or(crate::i18n::tr("Number must be a whole number from 1 to 16"))?;
         p.insert("count".into(), json!(n));
     }
     let spacing = field_of(d, "spacing");

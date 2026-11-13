@@ -48,7 +48,10 @@ pub(super) fn find_dialog(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bo
                 let mut p = q.clone();
                 p["with"] = json!(d.get("with", ""));
                 let msg = match app.session.execute("text.replace", &p) {
-                    Ok(v) => crate::i18n::fill("Replaced {n} occurrence(s).", &[("n", &v.get("replaced").and_then(Value::as_u64).unwrap_or(0).to_string())]),
+                    Ok(v) => crate::i18n::fill(
+                        "Replaced {n} occurrence(s).",
+                        &[("n", &v.get("replaced").and_then(Value::as_u64).unwrap_or(0).to_string())],
+                    ),
                     Err(_) => crate::i18n::fill("T-Deck can't find “{text}”.", &[("text", &text)]),
                 };
                 d.fields.insert("status".into(), msg);

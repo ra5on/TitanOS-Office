@@ -46,7 +46,10 @@ pub(super) fn gif_options(app: &SlideApp, ui: &mut Ui, d: &mut Dialog) -> Result
     };
     let seconds = num(d, "gifSeconds", f64::NAN);
     if deckcraft_engine::gif_export::check_seconds(seconds).is_err() {
-        return Err(crate::i18n::fill("Seconds per slide: enter {min} to {max}", &[("min", &MIN_SECONDS.to_string()), ("max", &MAX_SECONDS.to_string())]));
+        return Err(crate::i18n::fill(
+            "Seconds per slide: enter {min} to {max}",
+            &[("min", &MIN_SECONDS.to_string()), ("max", &MAX_SECONDS.to_string())],
+        ));
     }
     let mut p = json!({"width": width, "secondsPerSlide": seconds, "loop": forever, "includeHidden": hidden});
     let (from, to) = (num(d, "gifFrom", 1.0).round(), num(d, "gifTo", n as f64).round());

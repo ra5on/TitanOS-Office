@@ -172,7 +172,13 @@ fn edit_row(ui: &mut egui::Ui, t: &Tokens, icon: &str, label: &str, availability
     let press = theme::Press::track(ui, &resp);
     press.wash(ui, rect, 6, false);
     let body = rect.translate(press.offset());
-    icons::paint(ui, Rect::from_center_size(body.left_center() + vec2(15.0, 0.0), vec2(18.0, 18.0)), icon, 17.0, if ready { t.text } else { t.text_faint });
+    icons::paint(
+        ui,
+        Rect::from_center_size(body.left_center() + vec2(15.0, 0.0), vec2(18.0, 18.0)),
+        icon,
+        17.0,
+        if ready { t.text } else { t.text_faint },
+    );
     paint_row_label(ui, text, body.left_center() + vec2(34.0, 0.0), fg);
     let resp = theme::hand(resp);
     match availability {

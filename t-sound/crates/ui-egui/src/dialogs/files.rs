@@ -99,10 +99,10 @@ pub(super) fn open_pending_session(app: &mut SoundApp) {
             // This path replaces the document without going through `SoundApp::run`.
             app.document_replaced();
             if missing.is_empty() {
-        crate::i18n::fill("Opened {name}", &[("name", &name)])
-    } else {
-        crate::i18n::fill("Opened {name} ({n} missing media)", &[("name", &name), ("n", &missing.len().to_string())])
-    }
+                crate::i18n::fill("Opened {name}", &[("name", &name)])
+            } else {
+                crate::i18n::fill("Opened {name} ({n} missing media)", &[("name", &name), ("n", &missing.len().to_string())])
+            }
         }
         Err(e) => e.to_string(),
     };
