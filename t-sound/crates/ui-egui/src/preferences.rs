@@ -768,25 +768,22 @@ pub fn show(app: &mut SoundApp, ctx: &egui::Context) {
         tabs(ui, &mut page, &search);
         ui.separator();
 
-        // Reserve the same body height on every page. Only screens shorter or narrower than the
-        // normal window get an emergency scroll area, keeping the footer reachable and every row
-        // whole without changing the layout on large screens or making the window resizable.
+        // Reserve the same body height on every page, in a scroll area: a page taller than the body
+        // (the Mixing page in German) and a screen shorter or narrower than the normal window
+        // scroll, keeping the footer reachable and every row whole without making the window
+        // resizable.
         let body_top = ui.cursor().top();
-        if window_height < PREFERENCES_WINDOW_HEIGHT || window_width < PREFERENCES_WINDOW_WIDTH {
-            let body_width = ui.available_width() + (PREFERENCES_WINDOW_WIDTH - window_width);
-            egui::ScrollArea::both()
-                .id_salt("preferences_body")
-                .max_height(body_height)
-                .min_scrolled_height(body_height)
-                .auto_shrink([false, false])
-                .show(ui, |ui| {
-                    ui.set_min_width(body_width);
-                    ui.set_max_width(body_width);
-                    page_body(ui, page, &search, &mut draft);
-                });
-        } else {
-            page_body(ui, page, &search, &mut draft);
-        }
+        let body_width = ui.available_width() + (PREFERENCES_WINDOW_WIDTH - window_width);
+        egui::ScrollArea::both()
+            .id_salt("preferences_body")
+            .max_height(body_height)
+            .min_scrolled_height(body_height)
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.set_min_width(body_width);
+                ui.set_max_width(body_width);
+                page_body(ui, page, &search, &mut draft);
+            });
         let used_height = ui.cursor().top() - body_top;
         ui.add_space((body_height - used_height).max(0.0));
 
