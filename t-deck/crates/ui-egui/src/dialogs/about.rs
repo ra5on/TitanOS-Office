@@ -20,17 +20,17 @@ pub fn about(_app: &mut SlideApp, ui: &mut Ui) {
     ui.vertical_centered(|ui| {
         let (r, _) = ui.allocate_exact_size(vec2(64.0, 64.0), Sense::hover());
         paint_logo(ui.painter(), r);
-        ui.label(egui::RichText::new("T-Deck").font(theme::bold(22.0)));
+        ui.label(egui::RichText::new(crate::i18n::tr("T-Deck")).font(theme::bold(22.0)));
         ui.label(egui::RichText::new(version_line()).color(t.text_dim));
         ui.add_space(6.0);
-        ui.label("Presentations and slide shows, rebuilt from scratch in pure Rust.");
-        ui.label("An open-source, clean-room project. Not affiliated with Microsoft.");
+        ui.label(crate::i18n::tr("Presentations and slide shows, rebuilt from scratch in pure Rust."));
+        ui.label(crate::i18n::tr("An open-source, clean-room project. Not affiliated with Microsoft."));
         ui.add_space(6.0);
-        ui.label("Part of TitanOS: a modified version of DeckCraft (MIT OR Apache-2.0).");
-        ui.hyperlink_to("Source code: github.com/ra5on/TitanOS-Office", deckcraft_engine::links::GITHUB);
-        ui.hyperlink_to("Original: github.com/storytold/deckcraft", deckcraft_engine::links::ORIGINAL);
+        ui.label(crate::i18n::tr("Part of TitanOS: a modified version of DeckCraft (MIT OR Apache-2.0)."));
+        ui.hyperlink_to(crate::i18n::tr("Source code: github.com/ra5on/TitanOS-Office"), deckcraft_engine::links::GITHUB);
+        ui.hyperlink_to(crate::i18n::tr("Original: github.com/storytold/deckcraft"), deckcraft_engine::links::ORIGINAL);
         ui.add_space(6.0);
-        ui.label(egui::RichText::new("MIT OR Apache-2.0 · © 2026 ArtCraft Team and the DeckCraft contributors; changes for TitanOS by the TitanOS contributors").size(11.0).color(t.text_faint));
+        ui.label(egui::RichText::new(crate::i18n::tr("MIT OR Apache-2.0 · © 2026 ArtCraft Team and the DeckCraft contributors; changes for TitanOS by the TitanOS contributors")).size(11.0).color(t.text_faint));
     });
 }
 
@@ -38,7 +38,7 @@ pub fn about(_app: &mut SlideApp, ui: &mut Ui) {
 /// from `[workspace.package] version` (the single source of truth, `cargo xtask version`); the
 /// release workflow sets `DECKCRAFT_BUILD_SHA` / `DECKCRAFT_BUILD_DATE` at build time.
 pub fn version_line() -> String {
-    let mut s = format!("Version {}", option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")));
+    let mut s = crate::i18n::fill("Version {version}", &[("version", option_env!("TITANOS_OFFICE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")))]);
     let sha = option_env!("DECKCRAFT_BUILD_SHA").map(|s| s.get(..9).unwrap_or(s)).filter(|s| !s.is_empty());
     let date = option_env!("DECKCRAFT_BUILD_DATE").filter(|s| !s.is_empty());
     match (sha, date) {
@@ -109,7 +109,7 @@ mod about_credits_tests {
             let mut block = egui::Rect::NOTHING;
             let mut whole = egui::Rect::NOTHING;
             let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
-                tabs = ui.label("About").rect;
+                tabs = ui.label(crate::i18n::tr("About")).rect;
                 block = credits_block(ui, models);
                 whole = ui.min_rect();
             });
