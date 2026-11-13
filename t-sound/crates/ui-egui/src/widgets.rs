@@ -107,7 +107,7 @@ fn button_style(selected_fill: Color32, normal_icon: Color32, radius: u8) -> Ico
 /// input after a settled step. A hint or a real adjacent label is preferred where the design has
 /// one; this covers fields whose name lives in the dialog title or a painted heading.
 pub(crate) fn named_text_field(resp: egui::Response, name: &str) -> egui::Response {
-    let _ = resp.ctx.accesskit_node_builder(resp.id, |node| node.set_label(name));
+    let _ = resp.ctx.accesskit_node_builder(resp.id, |node| node.set_label(crate::i18n::tr(name)));
     resp
 }
 

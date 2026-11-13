@@ -98,7 +98,11 @@ pub(super) fn open_pending_session(app: &mut SoundApp) {
         Ok(missing) => {
             // This path replaces the document without going through `SoundApp::run`.
             app.document_replaced();
-            if missing.is_empty() { format!("Opened {name}") } else { format!("Opened {name} ({} missing media)", missing.len()) }
+            if missing.is_empty() {
+        crate::i18n::fill("Opened {name}", &[("name", &name)])
+    } else {
+        crate::i18n::fill("Opened {name} ({n} missing media)", &[("name", &name), ("n", &missing.len().to_string())])
+    }
         }
         Err(e) => e.to_string(),
     };
@@ -137,7 +141,8 @@ pub(super) fn path_dialog(id: &str, home: &str, name: &str) -> Option<Dialog> {
         _ => "",
     };
     let path = if importing || key == "dir" { format!("{home}/") } else { format!("{home}/{name}{ext}") };
-    let title = format!("{} — {}", spec.menu.last().copied().unwrap_or("File"), spec.label.trim_end_matches("..."));
+    let menu = crate::i18n::tr(spec.menu.last().copied().unwrap_or("File"));
+    let title = format!("{menu} — {}", crate::i18n::tr(spec.label).trim_end_matches("...").trim_end_matches('…'));
     Some(Dialog::PathPrompt { cmd: id.into(), title, path, key: key.into() })
 }
 

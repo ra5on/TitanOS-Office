@@ -3,6 +3,7 @@
 //! requires a real command and persistence policy first.
 
 use crate::SoundApp;
+use crate::i18n::tr;
 use crate::theme::{ThemeMode, Tokens};
 use egui::{Key, Modifiers, RichText, Stroke, vec2};
 use serde_json::json;
@@ -12,6 +13,7 @@ const PREFERENCES_WINDOW_HEIGHT: f32 = 945.0;
 const PREFERENCES_BODY_HEIGHT: f32 = 800.0;
 const PREFERENCES_SCREEN_MARGIN: f32 = 24.0;
 const PREFERENCES_MIN_HEIGHT: f32 = 320.0;
+const PREFERENCES_MIN_WIDTH: f32 = 320.0;
 
 /// One of the pages exposed by the Preferences window, in shortcut order.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -207,16 +209,24 @@ impl Control {
         }
     }
 
-    /// Builds the searchable text from a control's label, value and available choices.
+    /// Builds the searchable text from a control's label, value and available choices, in English
+    /// and in the interface language.
     fn search_text(self) -> String {
-        match self {
-            Self::Choice(label, value) | Self::Value(label, value) => format!("{label} {value}"),
-            Self::ChoiceOptions(label, value, values) => format!("{label} {value} {}", values.join(" ")),
-            Self::Radios(label, values) => format!("{label} {}", values.join(" ")),
-            Self::ReduceVisualEffects => format!("{} Never Only During Playback Always", self.label()),
-            _ => self.label().to_string(),
-        }
+        let words: Vec<&str> = match self {
+            Self::Choice(label, value) | Self::Value(label, value) => vec![label, value],
+            Self::ChoiceOptions(label, value, values) => [label, value].into_iter().chain(values.iter().copied()).collect(),
+            Self::Radios(label, values) => std::iter::once(label).chain(values.iter().copied()).collect(),
+            Self::ReduceVisualEffects => std::iter::once(self.label()).chain(ReduceVisualEffects::ALL.map(ReduceVisualEffects::label)).collect(),
+            _ => vec![self.label()],
+        };
+        words.into_iter().map(searchable).collect::<Vec<_>>().join(" ")
     }
+}
+
+/// `text` with its translation, for search: a German word finds the row, and so does the English.
+fn searchable(text: &str) -> String {
+    let shown = tr(text);
+    if shown == text { text.to_string() } else { format!("{text} {shown}") }
 }
 
 /// A titled group of controls within a preference page.
@@ -723,18 +733,19 @@ pub fn show(app: &mut SoundApp, ctx: &egui::Context) {
     // the window body is drawn. The Preferences window itself is on the foreground layer.
     let screen = ctx.content_rect();
     let window_height = preferences_window_height(screen.height());
+    let window_width = preferences_window_width(screen.width());
     let body_height = (PREFERENCES_BODY_HEIGHT - (PREFERENCES_WINDOW_HEIGHT - window_height)).max(160.0);
     egui::Area::new(egui::Id::unique("preferences_modal_blocker")).order(egui::Order::Middle).fixed_pos(screen.min).show(ctx, |ui| {
         ui.allocate_exact_size(screen.size(), egui::Sense::click_and_drag());
     });
 
-    let mut window = egui::Window::new("T-Sound Preferences")
+    let mut window = egui::Window::new(tr("T-Sound Preferences"))
         .id(egui::Id::unique("preferences_window"))
         .open(&mut open)
         .order(egui::Order::Foreground)
         .collapsible(false)
         .resizable(false)
-        .fixed_size(vec2(PREFERENCES_WINDOW_WIDTH, window_height));
+        .fixed_size(vec2(window_width, window_height));
     if let Some([x, y]) = app.ui.preferences_window_pos {
         window = window.default_pos(egui::pos2(x, y));
     }
@@ -743,13 +754,13 @@ pub fn show(app: &mut SoundApp, ctx: &egui::Context) {
         ui.horizontal(|ui| {
             let (icon_rect, _) = ui.allocate_exact_size(vec2(18.0, 18.0), egui::Sense::hover());
             crate::icons::draw(ui.painter(), icon_rect.shrink(1.0), "zoom", Tokens::current().text_dim);
-            let search_label = ui.label("Search");
+            let search_label = ui.label(tr("Search"));
             let edit = egui::TextEdit::singleline(&mut search)
                 .id(egui::Id::unique("preferences_search"))
-                .hint_text("Type to search preferences")
+                .hint_text(tr("Type to search preferences"))
                 .desired_width(f32::INFINITY);
             ui.add(edit).labelled_by(search_label.id);
-            if !search.is_empty() && ui.small_button("Clear").clicked() {
+            if !search.is_empty() && ui.small_button(tr("Clear")).clicked() {
                 search.clear();
             }
         });
@@ -757,17 +768,22 @@ pub fn show(app: &mut SoundApp, ctx: &egui::Context) {
         tabs(ui, &mut page, &search);
         ui.separator();
 
-        // Reserve the same body height on every page. Only screens shorter than the normal window
-        // get an emergency scroll area, keeping the footer reachable without changing tall-screen
-        // layout or making the window resizable.
+        // Reserve the same body height on every page. Only screens shorter or narrower than the
+        // normal window get an emergency scroll area, keeping the footer reachable and every row
+        // whole without changing the layout on large screens or making the window resizable.
         let body_top = ui.cursor().top();
-        if window_height < PREFERENCES_WINDOW_HEIGHT {
-            egui::ScrollArea::vertical()
+        if window_height < PREFERENCES_WINDOW_HEIGHT || window_width < PREFERENCES_WINDOW_WIDTH {
+            let body_width = ui.available_width() + (PREFERENCES_WINDOW_WIDTH - window_width);
+            egui::ScrollArea::both()
                 .id_salt("preferences_body")
                 .max_height(body_height)
                 .min_scrolled_height(body_height)
                 .auto_shrink([false, false])
-                .show(ui, |ui| page_body(ui, page, &search, &mut draft));
+                .show(ui, |ui| {
+                    ui.set_min_width(body_width);
+                    ui.set_max_width(body_width);
+                    page_body(ui, page, &search, &mut draft);
+                });
         } else {
             page_body(ui, page, &search, &mut draft);
         }
@@ -776,11 +792,11 @@ pub fn show(app: &mut SoundApp, ctx: &egui::Context) {
 
         ui.separator();
         ui.horizontal(|ui| {
-            ui.add_space(ui.available_width() - 176.0);
-            if ui.add_sized([80.0, 24.0], egui::Button::new("Cancel")).clicked() {
+            ui.add_space((ui.available_width() - 176.0).max(0.0));
+            if ui.add_sized([80.0, 24.0], egui::Button::new(tr("Cancel"))).clicked() {
                 action = Some(Action::Cancel);
             }
-            if ui.add_sized([80.0, 24.0], egui::Button::new("OK").fill(Tokens::current().accent_dark)).clicked() {
+            if ui.add_sized([80.0, 24.0], egui::Button::new(tr("OK")).fill(Tokens::current().accent_dark)).clicked() {
                 action = Some(Action::Apply);
             }
         });
@@ -824,6 +840,12 @@ pub fn show(app: &mut SoundApp, ctx: &egui::Context) {
     app.ui.show_preferences = open;
 }
 
+/// Caps the normal fixed window width so the window stays inside narrow screens (its body then
+/// scrolls sideways).
+fn preferences_window_width(screen_width: f32) -> f32 {
+    (screen_width - PREFERENCES_SCREEN_MARGIN).clamp(PREFERENCES_MIN_WIDTH, PREFERENCES_WINDOW_WIDTH)
+}
+
 /// Caps the normal fixed window height so its frame and footer remain inside short screens.
 fn preferences_window_height(screen_height: f32) -> f32 {
     (screen_height - PREFERENCES_SCREEN_MARGIN).clamp(PREFERENCES_MIN_HEIGHT, PREFERENCES_WINDOW_HEIGHT)
@@ -836,8 +858,8 @@ fn tabs(ui: &mut egui::Ui, page: &mut PreferencesPage, search: &str) {
         ui.horizontal(|ui| {
             for candidate in PreferencesPage::ALL {
                 let hit = page_matches(candidate, search);
-                let text =
-                    if !search.is_empty() && hit { RichText::new(candidate.label()).color(t.meter_yellow) } else { RichText::new(candidate.label()) };
+                let label = tr(candidate.label());
+                let text = if !search.is_empty() && hit { RichText::new(label).color(t.meter_yellow) } else { RichText::new(label) };
                 if ui.selectable_label(*page == candidate, text).clicked() {
                     *page = candidate;
                 }
@@ -889,15 +911,15 @@ fn section_ui(ui: &mut egui::Ui, page: PreferencesPage, section: Section, search
 /// Draws a section's title and border, including search-match highlighting.
 fn section_frame(ui: &mut egui::Ui, section: Section, search: &str, add_contents: impl FnOnce(&mut egui::Ui)) {
     let t = Tokens::current();
-    let section_hit = text_matches(section.title, search);
+    let section_hit = text_matches(&searchable(section.title), search);
     let stroke = if !search.is_empty() && section_hit { Stroke::new(1.5, t.meter_yellow) } else { Stroke::new(1.0, t.border) };
     egui::Frame::new().fill(t.panel_bg2).stroke(stroke).corner_radius(3.0).inner_margin(egui::Margin::same(6)).show(ui, |ui| {
         ui.set_min_width((ui.available_width() - 12.0).max(280.0));
         egui::Frame::new().fill(t.toolbar_group).inner_margin(egui::Margin::symmetric(6, 3)).show(ui, |ui| {
             let title = if !search.is_empty() && section_hit {
-                RichText::new(section.title).strong().color(t.meter_yellow)
+                RichText::new(tr(section.title)).strong().color(t.meter_yellow)
             } else {
-                RichText::new(section.title).strong()
+                RichText::new(tr(section.title)).strong()
             };
             ui.label(title);
         });
@@ -926,21 +948,22 @@ fn control_ui(ui: &mut egui::Ui, page: PreferencesPage, section: &str, index: us
     let t = Tokens::current();
     let hit = text_matches(&control.search_text(), search);
     let label = |text: &'static str| {
-        if !search.is_empty() && hit { RichText::new(text).color(t.meter_yellow) } else { RichText::new(text) }
+        if !search.is_empty() && hit { RichText::new(tr(text)).color(t.meter_yellow) } else { RichText::new(tr(text)) }
     };
+    const NOT_YET: &str = "This preference is not available yet.";
     let id = ("preference", page, section, index);
     match control {
         Control::Theme => {
-            craft_ui::ComboBox::new(id, label("UI Theme")).selected_text(draft.theme.label()).show_ui(ui, |ui| {
+            craft_ui::ComboBox::new(id, label("UI Theme")).selected_text(tr(draft.theme.label())).show_ui(ui, |ui| {
                 for mode in ThemeMode::ALL {
-                    ui.selectable_value(&mut draft.theme, mode, mode.label());
+                    ui.selectable_value(&mut draft.theme, mode, tr(mode.label()));
                 }
             });
         }
         Control::ReduceVisualEffects => {
-            craft_ui::ComboBox::new(id, label("Reduce Visual Effects")).selected_text(draft.reduce_visual_effects.label()).show_ui(ui, |ui| {
+            craft_ui::ComboBox::new(id, label("Reduce Visual Effects")).selected_text(tr(draft.reduce_visual_effects.label())).show_ui(ui, |ui| {
                 for mode in ReduceVisualEffects::ALL {
-                    ui.selectable_value(&mut draft.reduce_visual_effects, mode, mode.label());
+                    ui.selectable_value(&mut draft.reduce_visual_effects, mode, tr(mode.label()));
                 }
             });
         }
@@ -952,28 +975,28 @@ fn control_ui(ui: &mut egui::Ui, page: PreferencesPage, section: &str, index: us
         }
         Control::Check(text) => {
             let mut value = false;
-            ui.add_enabled(false, egui::Checkbox::new(&mut value, label(text))).on_disabled_hover_text("This preference is not available yet.");
+            ui.add_enabled(false, egui::Checkbox::new(&mut value, label(text))).on_disabled_hover_text(tr(NOT_YET));
         }
         Control::Choice(text, value) | Control::ChoiceOptions(text, value, _) => {
             ui.add_enabled_ui(false, |ui| {
-                craft_ui::ComboBox::new(id, label(text)).selected_text(value).show_ui(ui, |_| {});
+                craft_ui::ComboBox::new(id, label(text)).selected_text(tr(value)).show_ui(ui, |_| {});
             })
             .response
-            .on_disabled_hover_text("This preference is not available yet.");
+            .on_disabled_hover_text(tr(NOT_YET));
         }
         Control::Value(text, value) => {
             ui.add_enabled_ui(false, |ui| {
                 ui.horizontal(|ui| {
                     let caption = ui.label(label(text));
-                    let mut shown = value.to_string();
+                    let mut shown = tr(value).to_string();
                     ui.add(egui::TextEdit::singleline(&mut shown).desired_width(96.0)).labelled_by(caption.id);
                 });
             })
             .response
-            .on_disabled_hover_text("This preference is not available yet.");
+            .on_disabled_hover_text(tr(NOT_YET));
         }
         Control::Button(text) => {
-            ui.add_enabled(false, egui::Button::new(label(text))).on_disabled_hover_text("This preference is not available yet.");
+            ui.add_enabled(false, egui::Button::new(label(text))).on_disabled_hover_text(tr(NOT_YET));
         }
         Control::Radios(text, values) => {
             ui.add_enabled_ui(false, |ui| {
@@ -981,12 +1004,13 @@ fn control_ui(ui: &mut egui::Ui, page: PreferencesPage, section: &str, index: us
                 let mut selected = 0usize;
                 ui.indent(id, |ui| {
                     for (value_index, value) in values.iter().enumerate() {
-                        ui.radio_value(&mut selected, value_index, *value);
+                        // The automation modes Touch and Latch keep their names.
+                        ui.radio_value(&mut selected, value_index, if *value == "Latch" { value } else { tr(value) });
                     }
                 });
             })
             .response
-            .on_disabled_hover_text("This preference is not available yet.");
+            .on_disabled_hover_text(tr(NOT_YET));
         }
     }
 }
@@ -1015,9 +1039,10 @@ fn page_modifiers(modifiers: Modifiers, mac: bool) -> bool {
 
 /// Reports whether a page title, section or control matches the search terms.
 fn page_matches(page: PreferencesPage, search: &str) -> bool {
-    text_matches(page.label(), search)
+    text_matches(&searchable(page.label()), search)
         || page.sections().iter().any(|section| {
-            text_matches(section.title, search) || section.controls.iter().copied().any(|control| text_matches(&control.search_text(), search))
+            text_matches(&searchable(section.title), search)
+                || section.controls.iter().copied().any(|control| text_matches(&control.search_text(), search))
         })
 }
 
