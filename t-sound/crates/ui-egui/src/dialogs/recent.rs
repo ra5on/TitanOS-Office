@@ -96,7 +96,10 @@ pub fn menu(app: &mut SoundApp, ui: &mut egui::Ui) {
         for (i, path) in app.ui.recent_sessions.iter().enumerate() {
             let here = exists.get(i).copied().unwrap_or(true);
             let text = if here { label(path) } else { format!("{}  (missing)", label(path)) };
-            let r = ui.add_enabled(here, egui::Button::new(text)).on_hover_text(path.as_str()).on_disabled_hover_text(format!("{path}\nnot found"));
+            let r = ui
+                .add_enabled(here, egui::Button::new(text))
+                .on_hover_text(path.as_str())
+                .on_disabled_hover_text(crate::i18n::fill("{path}\nnot found", &[("path", path)]));
             if r.clicked() {
                 open = Some(path.clone());
             }
@@ -112,7 +115,7 @@ pub fn menu(app: &mut SoundApp, ui: &mut egui::Ui) {
             // Through the dialog layer, so unsaved changes are asked about first.
             if let Err(e) = crate::dialogs::run_or_ask(app, "session.open", json!({"path": path})) {
                 log::warn!("{path}: {e}");
-                app.ui.status = format!("Could not open {path}: {e}");
+                app.ui.status = crate::i18n::fill("Could not open {path}: {error}", &[("path", &path), ("error", &e.to_string())]);
             }
         }
     });

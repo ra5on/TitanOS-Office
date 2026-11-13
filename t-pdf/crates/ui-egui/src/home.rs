@@ -1,6 +1,8 @@
 //! Home tab: recommended tools, open card, pinned folders and recent files (local only, never
 //! another app's list).
 
+use std::sync::Arc;
+
 use egui::{Align2, CornerRadius, Rect, Sense, Stroke, vec2};
 use pdfcraft_engine::catalog;
 
@@ -20,10 +22,51 @@ pub(crate) fn card_lift(ui: &egui::Ui, t: &Tokens, rect: Rect, press: theme::Pre
     }
 }
 
-/// Render a single tool card with the standard lift, styling, icon, title, description, and action.
-/// If `allow_unpin` is true, an unpin button is always accessible in the top right corner.
-fn tool_card(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static catalog::ToolGroup, allow_unpin: bool) -> Option<&'static str> {
-    let (rect, resp) = ui.allocate_exact_size(vec2(190.0, 104.0), Sense::click());
+/// Width of a tool card on Home.
+const CARD_WIDTH: f32 = 190.0;
+/// Height of a tool card whose name and description fit their usual one and two lines.
+const CARD_MIN_HEIGHT: f32 = 104.0;
+
+/// A tool card's name and description, wrapped onto as many lines as they need (never cut): the
+/// name beside the icon, short of the unpin button when there is one (`allow_unpin`), the
+/// description across the card.
+fn card_text(ui: &egui::Ui, t: &Tokens, g: &catalog::ToolGroup, allow_unpin: bool) -> (Arc<egui::Galley>, Arc<egui::Galley>) {
+    let title_width = CARD_WIDTH - 44.0 - if allow_unpin { 36.0 } else { 14.0 };
+    let title = egui::text::LayoutJob::simple(tl!(g.label).to_owned(), theme::semibold(13.5), t.text, title_width);
+    let blurb = g.sections.first().map(|s| s.items.iter().take(3).map(|i| tl!(i.label)).collect::<Vec<_>>().join(" · ")).unwrap_or_default();
+    let blurb = egui::text::LayoutJob::simple(blurb, theme::regular(11.5), t.text_muted, CARD_WIDTH - 28.0);
+    ui.fonts_mut(|f| (f.layout_job(title), f.layout_job(blurb)))
+}
+
+/// Where a card's name starts (its first line centred on the icon) and its description starts.
+fn card_layout(title: &egui::Galley) -> (f32, f32) {
+    let line = title.size().y / title.rows.len().max(1) as f32;
+    let title_top = 25.0 - line * 0.5;
+    (title_top, (title_top + title.size().y + 8.0).max(46.0))
+}
+
+/// The height of a card with this name and description: room for both and the action under them.
+fn card_height(title: &egui::Galley, blurb: &egui::Galley) -> f32 {
+    let (_, blurb_top) = card_layout(title);
+    (blurb_top + blurb.size().y + 32.0).max(CARD_MIN_HEIGHT)
+}
+
+/// The height every card of a row of tools `ids` gets: the tallest one's.
+fn cards_height(ui: &egui::Ui, t: &Tokens, ids: impl Iterator<Item = &'static str>, allow_unpin: bool) -> f32 {
+    ids.filter_map(catalog::group).map(|g| {
+        let (title, blurb) = card_text(ui, t, g, allow_unpin);
+        card_height(&title, &blurb)
+    })
+    .fold(CARD_MIN_HEIGHT, f32::max)
+}
+
+/// Render a single tool card `height` tall with the standard lift, styling, icon, title,
+/// description, and action. If `allow_unpin` is true, an unpin button is always accessible in the
+/// top right corner.
+fn tool_card(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static catalog::ToolGroup, allow_unpin: bool, height: f32) -> Option<&'static str> {
+    let (title, blurb) = card_text(ui, t, g, allow_unpin);
+    let (title_top, blurb_top) = card_layout(&title);
+    let (rect, resp) = ui.allocate_exact_size(vec2(CARD_WIDTH, height), Sense::click());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!(g.label)));
     let press = theme::Press::track(ui, &resp);
     card_lift(ui, t, rect, press);
@@ -47,20 +90,9 @@ fn tool_card(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static c
         }
     }
 
-    let mut title_job = egui::text::LayoutJob::simple_singleline(tl!(g.label).to_owned(), theme::semibold(13.5), t.text);
-    title_job.wrap = egui::text::TextWrapping { max_width: body.width() - 58.0, max_rows: 1, break_anywhere: true, ..Default::default() };
-    let title = ui.fonts_mut(|f| f.layout_job(title_job));
-    let title_elided = title.elided;
-    ui.painter().galley(body.min + vec2(44.0, 25.0 - title.size().y * 0.5), title, t.text);
-    let blurb = g.sections.first().map(|s| s.items.iter().take(3).map(|i| tl!(i.label)).collect::<Vec<_>>().join(" · ")).unwrap_or_default();
-    // Fixed-height cards must leave room for their action in every language.
-    let mut job = egui::text::LayoutJob::simple(blurb.clone(), theme::regular(11.5), t.text_muted, body.width() - 28.0);
-    job.wrap.max_rows = 2;
-    let galley = ui.fonts_mut(|f| f.layout_job(job));
-    let blurb_elided = galley.elided;
-    ui.painter().galley(body.min + vec2(14.0, 46.0), galley, t.text_muted);
+    ui.painter().galley(body.min + vec2(44.0, title_top), title, t.text);
+    ui.painter().galley(body.min + vec2(14.0, blurb_top), blurb, t.text_muted);
     ui.painter().text(body.left_bottom() + vec2(14.0, -14.0), Align2::LEFT_CENTER, tl!("Use now"), theme::medium(12.0), t.accent_text);
-    let resp = if title_elided || blurb_elided { resp.on_hover_text(format!("{}\n{blurb}", tl!(g.label))) } else { resp };
     if unpin_clicked {
         Some(g.id)
     } else {
@@ -121,6 +153,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                     ui.set_width(ui.available_width());
                     ui.label(egui::RichText::new(tl!("Recommended tools")).font(theme::semibold(15.0)));
                     ui.add_space(10.0);
+                    let height = cards_height(ui, &t, RECOMMENDED.into_iter().filter(|id| !app.is_tool_pinned(id)), false);
                     ui.horizontal_wrapped(|ui| {
                         ui.spacing_mut().item_spacing = vec2(14.0, 14.0);
                         for id in RECOMMENDED {
@@ -128,9 +161,9 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                                 continue;
                             }
                             let Some(g) = catalog::group(id) else { continue };
-                            tool_card(app, ui, &t, g, false);
+                            tool_card(app, ui, &t, g, false, height);
                         }
-                        let (rect, resp) = ui.allocate_exact_size(vec2(170.0, 104.0), Sense::click());
+                        let (rect, resp) = ui.allocate_exact_size(vec2(170.0, height), Sense::click());
                         resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("Open file")));
                         let press = theme::Press::track(ui, &resp);
                         card_lift(ui, &t, rect, press);
@@ -166,11 +199,12 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
             } else {
                 ui.add_space(6.0);
                 let pinned = app.pinned_tools.clone();
+                let height = cards_height(ui, &t, pinned.iter().filter_map(|id| catalog::group(id)).map(|g| g.id), true);
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing = vec2(14.0, 14.0);
                     for id in &pinned {
                         let Some(g) = catalog::group(id) else { continue };
-                        if let Some(to_unpin) = tool_card(app, ui, &t, g, true) {
+                        if let Some(to_unpin) = tool_card(app, ui, &t, g, true, height) {
                             unpin_tool = Some(to_unpin);
                         }
                     }
@@ -348,7 +382,7 @@ mod tests {
             .iter()
             .find(|text| text.galley.job.text == crate::i18n::tr(de, "Use now") && (text.pos.x - description.pos.x).abs() < 0.1)
             .unwrap();
-        assert!(description.galley.rows.len() <= 2);
+        assert!(!description.galley.elided, "the description is whole");
         assert!(
             description.pos.y + description.galley.size().y + 4.0 <= action.pos.y,
             "the translated description must leave a visible gap before its action"

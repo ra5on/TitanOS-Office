@@ -54,6 +54,23 @@ pub fn open_bytes(app: &mut VectorcraftApp, name: &str, bytes: &[u8], path: Opti
     open_document(app, name, bytes, path, &Value::Null)
 }
 
+/// The formats of a drawing the page hands over ([`open_arrived`]) that keep their name as their
+/// path: the formats Save writes whose file opens straight as a document. PDF and `.ai` files may
+/// ask for their pages first (Import PDF), which reads a path from disk again, so they open as
+/// before.
+const SAVES_BACK_ON_THE_WEB: &[&str] = &["vectorcraft", "svg", "svgz", "eps"];
+
+/// A file the web page hands over (the browser's file picker, a drop, or TitanOS's `openFile`):
+/// it has a name but no path. A drawing in a format Save writes keeps that name as its path, as a
+/// file opened from disk keeps its own: Save writes it back in its own format under that name (a
+/// download, which TitanOS keeps as the Save of the window's file) instead of asking for a name and
+/// a format the first time (PLAN 80-3: an opened `.svg` asked); Save As still asks. Any other file
+/// opens as [`open_bytes`] opens it.
+pub fn open_arrived(app: &mut VectorcraftApp, name: &str, bytes: &[u8]) -> Result<Value, String> {
+    let saves_back = opens_as(name).is_none() && fileio::format_for_name(name).is_some_and(|f| SAVES_BACK_ON_THE_WEB.contains(&f.id));
+    open_bytes(app, name, bytes, saves_back.then(|| name.to_string()))
+}
+
 /// The kinds of file File → Open installs, imports, checks, shows in the library panel or the
 /// Libraries panel, or reviews in Import Shortcut Set ([`opens_as`]).
 #[derive(Clone, Copy, Debug, PartialEq)]

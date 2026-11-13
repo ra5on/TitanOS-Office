@@ -24,29 +24,29 @@ pub(super) fn audiosuite_window(app: &mut SoundApp, ctx: &egui::Context) {
             match process.as_str() {
                 "normalize" => {
                     let v = params.entry("target_db".into()).or_insert(-0.1);
-                    ui.add(egui::Slider::new(v, -24.0..=0.0).text("Peak dB"));
+                    ui.add(egui::Slider::new(v, -24.0..=0.0).text(crate::i18n::tr("Peak dB")));
                 }
                 "time_stretch" => {
                     let v = params.entry("ratio".into()).or_insert(1.0);
-                    ui.add(egui::Slider::new(v, 0.25..=4.0).text("Length ratio"));
+                    ui.add(egui::Slider::new(v, 0.25..=4.0).text(crate::i18n::tr("Length ratio")));
                 }
                 "pitch_shift" => {
                     let v = params.entry("semitones".into()).or_insert(0.0);
-                    ui.add(egui::Slider::new(v, -24.0..=24.0).text("Semitones"));
+                    ui.add(egui::Slider::new(v, -24.0..=24.0).text(crate::i18n::tr("Semitones")));
                 }
                 "speed_ramp" => {
                     for (id, label, default, choices) in SPEED_RAMP_CHOICES {
                         let v = params.entry(id.to_string()).or_insert(default);
                         ui.horizontal(|ui| {
-                            ui.label(label);
+                            ui.label(crate::i18n::tr(label));
                             for &(value, name) in choices {
-                                ui.radio_value(v, value, name);
+                                ui.radio_value(v, value, crate::i18n::tr(name));
                             }
                         });
                     }
                 }
                 _ => {
-                    ui.label("No parameters.");
+                    ui.label(crate::i18n::tr("No parameters."));
                 }
             }
         }
@@ -56,8 +56,8 @@ pub(super) fn audiosuite_window(app: &mut SoundApp, ctx: &egui::Context) {
         } else {
             "Processes the selected clips and replaces them with rendered audio."
         };
-        ui.label(egui::RichText::new(hint).small());
-        if ui.button(egui::RichText::new("Render").strong()).clicked() {
+        ui.label(egui::RichText::new(crate::i18n::tr(hint)).small());
+        if ui.button(egui::RichText::new(crate::i18n::tr("Render")).strong()).clicked() {
             let p: serde_json::Map<String, Value> = params.iter().map(|(k, v)| (k.clone(), json!(v))).collect();
             let _ = app.run("audiosuite.process", json!({"process": process, "params": p}));
         }

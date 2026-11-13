@@ -105,10 +105,12 @@ fn renderer(app: &mut SoundApp, ctx: &egui::Context) {
             (tr.name.clone(), sp.x, sp.y, sp.z)
         })
         .collect();
-    egui::Window::new(egui::RichText::new("Renderer").font(bold(13.0))).open(&mut open).default_size(vec2(380.0, 440.0)).resizable(true).show(
-        ctx,
-        |ui| {
-            ui.label(egui::RichText::new(format!("Main output: {}", fmt.label())).font(regular(11.0)).color(t.text));
+    egui::Window::new(egui::RichText::new(crate::i18n::tr("Renderer")).font(bold(13.0)))
+        .open(&mut open)
+        .default_size(vec2(380.0, 440.0))
+        .resizable(true)
+        .show(ctx, |ui| {
+            ui.label(egui::RichText::new(crate::i18n::fill("Main output: {format}", &[("format", fmt.label())])).font(regular(11.0)).color(t.text));
             let side = ui.available_width().min(360.0);
             let (r, _) = ui.allocate_exact_size(vec2(side, side), Sense::hover());
             let p = ui.painter_at(r);
@@ -136,15 +138,16 @@ fn renderer(app: &mut SoundApp, ctx: &egui::Context) {
             ui.add_space(4.0);
             if objects.is_empty() {
                 ui.label(
-                    egui::RichText::new("No object tracks. Use the Object view in the Mix window to route tracks as objects.")
+                    egui::RichText::new(crate::i18n::tr("No object tracks. Use the Object view in the Mix window to route tracks as objects."))
                         .small()
                         .color(t.text_dim),
                 );
             } else {
-                ui.label(egui::RichText::new(format!("{} object track(s)", objects.len())).small().color(t.text_dim));
+                ui.label(
+                    egui::RichText::new(crate::i18n::fill("{n} object track(s)", &[("n", &objects.len().to_string())])).small().color(t.text_dim),
+                );
             }
-        },
-    );
+        });
     app.extra.show_renderer = open;
 }
 
@@ -154,9 +157,11 @@ fn ui_customization(app: &mut SoundApp, ctx: &egui::Context) {
     if !open {
         return;
     }
-    egui::Window::new(egui::RichText::new("Appearance").font(bold(13.0))).open(&mut open).default_size(vec2(320.0, 180.0)).resizable(false).show(
-        ctx,
-        |ui| {
+    egui::Window::new(egui::RichText::new(crate::i18n::tr("Appearance")).font(bold(13.0)))
+        .open(&mut open)
+        .default_size(vec2(320.0, 180.0))
+        .resizable(false)
+        .show(ctx, |ui| {
             // Each control carries its own visible label, which is also its accessible name. A
             // label in a neighbouring grid cell is only painted text: a screen reader (and the
             // kittest accessibility check) would see an unnamed slider, checkbox or combo box.
@@ -164,21 +169,24 @@ fn ui_customization(app: &mut SoundApp, ctx: &egui::Context) {
                 egui::Slider::new(&mut app.extra.ui_scale, 0.75..=1.5)
                     .step_by(0.05)
                     .custom_formatter(|v, _| format!("{:.0} %", v * 100.0))
-                    .text("Interface scale"),
+                    .text(crate::i18n::tr("Interface scale")),
             );
             let mut chosen_effects = None;
-            craft_ui::ComboBox::from_label("Reduce visual effects").selected_text(app.ui.reduce_visual_effects.label()).show_ui(ui, |ui| {
-                for mode in crate::preferences::ReduceVisualEffects::ALL {
-                    if ui.selectable_label(app.ui.reduce_visual_effects == mode, mode.label()).clicked() {
-                        chosen_effects = Some(mode);
+            craft_ui::ComboBox::from_label(crate::i18n::tr("Reduce visual effects")).selected_text(app.ui.reduce_visual_effects.label()).show_ui(
+                ui,
+                |ui| {
+                    for mode in crate::preferences::ReduceVisualEffects::ALL {
+                        if ui.selectable_label(app.ui.reduce_visual_effects == mode, mode.label()).clicked() {
+                            chosen_effects = Some(mode);
+                        }
                     }
-                }
-            });
+                },
+            );
             if let Some(mode) = chosen_effects {
                 let _ = app.run("ui.reduce_visual_effects", json!({"mode": mode.id()}));
             }
             let mut chosen = None;
-            craft_ui::ComboBox::from_label("Theme").selected_text(app.ui.theme.label()).show_ui(ui, |ui| {
+            craft_ui::ComboBox::from_label(crate::i18n::tr("Theme")).selected_text(app.ui.theme.label()).show_ui(ui, |ui| {
                 for mode in crate::theme::ThemeMode::ALL {
                     if ui.selectable_label(app.ui.theme == mode, mode.label()).clicked() {
                         chosen = Some(mode);
@@ -188,14 +196,13 @@ fn ui_customization(app: &mut SoundApp, ctx: &egui::Context) {
             if let Some(mode) = chosen {
                 let _ = app.run("ui.theme", json!({"mode": mode.id()}));
             }
-            crate::widgets::checkbox(ui, &mut app.extra.auto_update_config, "Auto-update configuration");
+            crate::widgets::checkbox(ui, &mut app.extra.auto_update_config, crate::i18n::tr("Auto-update configuration"));
             ui.add_space(4.0);
-            if ui.button("Reset").clicked() {
+            if ui.button(crate::i18n::tr("Reset")).clicked() {
                 app.extra.ui_scale = 1.0;
                 let _ = app.run("ui.reduce_visual_effects", json!({"mode": "never"}));
                 let _ = app.run("ui.theme", json!({"mode": crate::theme::ThemeMode::default().id()}));
             }
-        },
-    );
+        });
     app.extra.show_ui_customization = open;
 }

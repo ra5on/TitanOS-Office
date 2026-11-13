@@ -1,4 +1,4 @@
-use super::{Dialog, SlideApp, Tokens, Ui, Value, buttons, json, vec2};
+use super::{Dialog, SlideApp, Tokens, Ui, Value, buttons, json};
 
 fn seed_theme_fonts(d: &mut Dialog) {
     if d.fields.contains_key("seeded") {
@@ -72,11 +72,11 @@ pub(super) fn theme_fonts_dialog(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog
     let mut major = major;
     let mut minor = minor;
     ui.horizontal(|ui| {
-        ui.add_sized(vec2(110.0, 18.0), egui::Label::new("Heading:"));
+        super::label_cell(ui, crate::i18n::tr("Heading:"), 110.0, 18.0);
         font_combo(ui, "Heading font", &headings, &mut major);
     });
     ui.horizontal(|ui| {
-        ui.add_sized(vec2(110.0, 18.0), egui::Label::new("Body:"));
+        super::label_cell(ui, crate::i18n::tr("Body:"), 110.0, 18.0);
         font_combo(ui, "Body font", &bodies, &mut minor);
     });
     d.fields.insert("major".into(), major.clone());
@@ -84,12 +84,12 @@ pub(super) fn theme_fonts_dialog(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog
     ui.add_space(4.0);
     // Theme faces are not egui families; naming an unbound family panics. The lines show the
     // chosen names at heading and body sizes.
-    ui.label(egui::RichText::new(format!("Heading sample  {major}")).size(20.0));
-    ui.label(egui::RichText::new(format!("Body sample  {minor}")).size(14.0));
+    ui.label(egui::RichText::new(crate::i18n::fill("Heading sample  {font}", &[("font", &major)])).size(20.0));
+    ui.label(egui::RichText::new(crate::i18n::fill("Body sample  {font}", &[("font", &minor)])).size(14.0));
     ui.add_space(4.0);
     let mut name = d.get("schemeName", "");
     ui.horizontal(|ui| {
-        ui.add_sized(vec2(110.0, 18.0), egui::Label::new("Name:"));
+        super::label_cell(ui, crate::i18n::tr("Name:"), 110.0, 18.0);
         let resp = ui.add(egui::TextEdit::singleline(&mut name).desired_width(240.0).id_salt("schemeName"));
         let shown = name.clone();
         resp.widget_info(move || {
@@ -99,7 +99,7 @@ pub(super) fn theme_fonts_dialog(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog
         });
     });
     d.fields.insert("schemeName".into(), name);
-    ui.label(egui::RichText::new("Heading and body fonts for this presentation.").size(11.0).color(Tokens::get(ui.ctx()).text_dim));
+    ui.label(egui::RichText::new(crate::i18n::tr("Heading and body fonts for this presentation.")).size(11.0).color(Tokens::get(ui.ctx()).text_dim));
     let (ok, cancel) = buttons(ui, "Save");
     if ok {
         match theme_font_payload(d) {

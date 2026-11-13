@@ -115,7 +115,7 @@ fn finish(app: &mut SoundApp) {
         Ok(decoded) => {
             app.engine.offer_import(decoded);
             if run_now(app, params) {
-                app.ui.status = format!("Imported {name}");
+                app.ui.status = crate::i18n::fill("Imported {name}", &[("name", &name)]);
             }
             app.engine.drop_offered_imports();
         }
@@ -143,8 +143,8 @@ pub fn show(app: &SoundApp, ctx: &egui::Context) {
             egui::Frame::popup(ui.style()).show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.add(egui::Spinner::new());
-                    let more = if waiting > 0 { format!(" ({waiting} more)") } else { String::new() };
-                    ui.label(format!("Importing {name}{more}"));
+                    let more = if waiting > 0 { crate::i18n::fill(" ({n} more)", &[("n", &waiting.to_string())]) } else { String::new() };
+                    ui.label(crate::i18n::fill("Importing {name}{more}", &[("name", &name), ("more", &more)]));
                 });
             });
         },

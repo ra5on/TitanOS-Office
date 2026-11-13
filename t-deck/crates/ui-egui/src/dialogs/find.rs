@@ -1,4 +1,4 @@
-use super::{Dialog, SlideApp, Ui, Value, check, field, json, vec2};
+use super::{Dialog, SlideApp, Ui, Value, check, field, json};
 
 /// Home › Find / Replace: step through matches (slide text, table cells, notes) or replace them.
 pub(super) fn find_dialog(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bool {
@@ -6,7 +6,7 @@ pub(super) fn find_dialog(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bo
     // "Find what:" has the keyboard when the dialog opens, so Ctrl+F and typing finds (#951).
     let mut what = d.get("text", "");
     ui.horizontal(|ui| {
-        ui.add_sized(vec2(120.0, 20.0), egui::Label::new("Find what:"));
+        super::label_cell(ui, crate::i18n::tr("Find what:"), 120.0, 20.0);
         let r = ui.add(egui::TextEdit::singleline(&mut what).desired_width(180.0));
         // Enter finds the next match and leaves the keyboard here, so the search can be changed.
         if !d.fields.contains_key("focused") || (r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))) {
@@ -27,11 +27,11 @@ pub(super) fn find_dialog(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bo
     ui.add_space(6.0);
     ui.horizontal(|ui| {
         let has = !text.is_empty();
-        if ui.add_enabled(has, egui::Button::new("Find Next")).clicked() || (has && ui.input(|i| i.key_pressed(egui::Key::Enter))) {
+        if ui.add_enabled(has, egui::Button::new(crate::i18n::tr("Find Next"))).clicked() || (has && ui.input(|i| i.key_pressed(egui::Key::Enter))) {
             find_next = true;
         }
         if replace_mode {
-            if ui.add_enabled(has, egui::Button::new("Replace")).clicked() {
+            if ui.add_enabled(has, egui::Button::new(crate::i18n::tr("Replace"))).clicked() {
                 let cur: Option<Value> = serde_json::from_str(&d.get("cur", "")).ok();
                 if let Some(at) = cur {
                     let mut p = q.clone();
@@ -44,27 +44,30 @@ pub(super) fn find_dialog(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bo
                 }
                 find_next = true;
             }
-            if ui.add_enabled(has, egui::Button::new("Replace All")).clicked() {
+            if ui.add_enabled(has, egui::Button::new(crate::i18n::tr("Replace All"))).clicked() {
                 let mut p = q.clone();
                 p["with"] = json!(d.get("with", ""));
                 let msg = match app.session.execute("text.replace", &p) {
-                    Ok(v) => format!("Replaced {} occurrence(s).", v.get("replaced").and_then(Value::as_u64).unwrap_or(0)),
-                    Err(_) => format!("T-Deck can't find “{text}”."),
+                    Ok(v) => crate::i18n::fill(
+                        "Replaced {n} occurrence(s).",
+                        &[("n", &v.get("replaced").and_then(Value::as_u64).unwrap_or(0).to_string())],
+                    ),
+                    Err(_) => crate::i18n::fill("T-Deck can't find “{text}”.", &[("text", &text)]),
                 };
                 d.fields.insert("status".into(), msg);
                 d.fields.remove("cur");
             }
-        } else if ui.button("Replace…").clicked() {
+        } else if ui.button(crate::i18n::tr("Replace…")).clicked() {
             d.fields.insert("replace".into(), "1".into());
         }
-        if ui.button("Close").clicked() {
+        if ui.button(crate::i18n::tr("Close")).clicked() {
             close = true;
         }
     });
     if find_next {
         let list = app.session.execute("text.find", &q).ok().and_then(|v| v.as_array().cloned()).unwrap_or_default();
         if list.is_empty() {
-            d.fields.insert("status".into(), format!("T-Deck can't find “{text}”."));
+            d.fields.insert("status".into(), crate::i18n::fill("T-Deck can't find “{text}”.", &[("text", &text)]));
             d.fields.remove("cur");
         } else {
             let n = d.get("next", "0").parse::<usize>().unwrap_or(0) % list.len();
@@ -75,10 +78,18 @@ pub(super) fn find_dialog(app: &mut SlideApp, ui: &mut Ui, d: &mut Dialog) -> bo
             }
             d.fields.insert("cur".into(), m.to_string());
             d.fields.insert("next".into(), (n + 1).to_string());
-            let where_ = if m.get("shape").is_some_and(Value::is_null) { " (notes)" } else { "" };
+            let where_ = if m.get("shape").is_some_and(Value::is_null) { crate::i18n::tr(" (notes)") } else { "" };
             d.fields.insert(
                 "status".into(),
-                format!("Match {} of {} on slide {}{where_}.", n + 1, list.len(), m.get("slide").and_then(Value::as_u64).unwrap_or(0) + 1),
+                crate::i18n::fill(
+                    "Match {n} of {count} on slide {slide}{where}.",
+                    &[
+                        ("n", &(n + 1).to_string()),
+                        ("count", &list.len().to_string()),
+                        ("slide", &(m.get("slide").and_then(Value::as_u64).unwrap_or(0) + 1).to_string()),
+                        ("where", where_),
+                    ],
+                ),
             );
         }
     }

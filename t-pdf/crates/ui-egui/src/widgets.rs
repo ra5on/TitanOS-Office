@@ -187,9 +187,23 @@ pub fn ghost_button_sized(ui: &mut egui::Ui, icon: &str, label: &str, height: f3
     theme::hand(resp)
 }
 
-/// A search-field lookalike that opens the command palette.
-pub fn search_box(ui: &mut egui::Ui, placeholder: &str, width: f32) -> Response {
+/// A search-field lookalike that opens the command palette, at most `max_width` wide: as wide as
+/// its whole hint and shortcut need (260 pt at least), else a round search button that names both
+/// in its tooltip. The hint is never cut short or drawn under the shortcut.
+pub fn search_box(ui: &mut egui::Ui, placeholder: &str, max_width: f32) -> Response {
     let t = Tokens::get(ui.ctx());
+    let shortcut_text = crate::commands::command_shortcut_label(ui.ctx(), "view.palette");
+    let shortcut = ui.painter().layout_no_wrap(shortcut_text.clone(), theme::regular(11.5), t.text_faint);
+    let mut job = egui::text::LayoutJob::simple_singleline(placeholder.to_owned(), theme::regular(13.0), t.text_faint);
+    job.direction = crate::bidi::ui_direction();
+    let text = ui.fonts_mut(|f| f.layout_job(job));
+    // The icon (34), the hint, a gap (10), the shortcut and the right margin (12).
+    let needed = 34.0 + text.size().x + 10.0 + shortcut.size().x + 12.0;
+    if needed > max_width {
+        let tip = if shortcut_text.is_empty() { placeholder.to_owned() } else { format!("{placeholder} ({shortcut_text})") };
+        return icons::button(ui, "search", 32.0, false, &tip);
+    }
+    let width = needed.max(260.0).min(max_width);
     let (rect, resp) = ui.allocate_exact_size(vec2(width, 32.0), Sense::click());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), placeholder));
     let press = theme::Press::track(ui, &resp);
@@ -197,23 +211,11 @@ pub fn search_box(ui: &mut egui::Ui, placeholder: &str, width: f32) -> Response 
     let edge = t.border.lerp_to_gamma(t.text_muted, press.hover * 0.35);
     ui.painter().rect(rect, CornerRadius::same(16), fill, Stroke::new(1.0, edge), egui::StrokeKind::Inside);
     icons::paint(ui, Rect::from_min_size(rect.min + vec2(10.0, 8.0), vec2(16.0, 16.0)), "search", 15.0, t.text_muted);
-    let shortcut = crate::commands::command_shortcut_label(ui.ctx(), "view.palette");
-    let shortcut = ui.painter().layout_no_wrap(shortcut, theme::regular(11.5), t.text_faint);
     let shortcut_pos = rect.right_center() - vec2(12.0 + shortcut.size().x, shortcut.size().y * 0.5);
-    // Reserve the measured shortcut width in every language; long translations are elided
-    // within the remaining space rather than painted underneath the shortcut.
-    let text_right = (shortcut_pos.x - 10.0).max(rect.left());
-    let text_left = (rect.left() + 34.0).min(text_right);
-    let text_rect = Rect::from_min_max(egui::pos2(text_left, rect.top()), egui::pos2(text_right, rect.bottom()));
-    let mut job = egui::text::LayoutJob::simple_singleline(placeholder.to_owned(), theme::regular(13.0), t.text_faint);
-    job.direction = crate::bidi::ui_direction();
-    job.wrap = egui::text::TextWrapping { max_width: text_rect.width(), max_rows: 1, break_anywhere: true, ..Default::default() };
-    let text = ui.fonts_mut(|f| f.layout_job(job));
-    let elided = text.elided;
-    ui.painter().with_clip_rect(text_rect).galley(egui::pos2(text_left, rect.center().y - text.size().y * 0.5), text, t.text_faint);
+    let text_left = rect.left() + 34.0;
+    ui.painter().galley(egui::pos2(text_left, rect.center().y - text.size().y * 0.5), text, t.text_faint);
     ui.painter().with_clip_rect(rect).galley(shortcut_pos, shortcut, t.text_faint);
-    let resp = resp.on_hover_cursor(egui::CursorIcon::Text);
-    if elided { resp.on_hover_text(placeholder) } else { resp }
+    resp.on_hover_cursor(egui::CursorIcon::Text)
 }
 
 /// Corner radius of a checkbox's box. With the widgets' radius (`Tokens::radius`, 6) egui's 14 px
@@ -699,15 +701,17 @@ mod tests {
     use super::*;
     use egui::Pos2;
 
+    /// PLAN 80-3: the hint is shown whole, before the shortcut, or not at all: with no room for it
+    /// the field is a search button that names the hint and the shortcut in its tooltip.
     #[test]
-    fn search_placeholder_never_overlaps_the_shortcut() {
+    fn search_placeholder_is_whole_or_a_button() {
         if !crate::i18n::needs_catalogs() {
             return;
         }
         let previous = crate::i18n::current();
         for (code, expected) in [("en", "Ctrl+K"), ("de", "Strg+K")] {
             crate::i18n::set_current(crate::i18n::Lang::from_code(code).unwrap());
-            for width in [260.0, 160.0, 90.0] {
+            for width in [400.0, 260.0, 160.0, 90.0] {
                 let ctx = egui::Context::default();
                 ctx.set_os(egui::os::OperatingSystem::Nix);
                 ctx.set_fonts(theme::font_definitions());
@@ -715,17 +719,21 @@ mod tests {
                 let output = ctx.run_ui(egui::RawInput::default(), |ui| {
                     search_box(ui, placeholder, width);
                 });
-                let text_shapes: Vec<_> = output
-                    .shapes
-                    .iter()
-                    .filter_map(|shape| if let egui::Shape::Text(text) = &shape.shape { Some((shape.clip_rect, text)) } else { None })
-                    .collect();
-                let (clip, hint) = text_shapes.iter().find(|(_, text)| text.galley.job.text == placeholder).unwrap();
-                let (_, shortcut) = text_shapes.iter().find(|(_, text)| text.galley.job.text.contains('K')).unwrap();
-                assert_eq!(shortcut.galley.job.text, expected);
-                assert!(clip.right() <= shortcut.pos.x - 9.0, "hint must leave a gap before the shortcut at width {width}");
-                assert!(hint.galley.elided, "the long original German hint must be elided at width {width}");
-                assert_eq!(hint.galley.rows.len(), 1);
+                let text_shapes: Vec<_> =
+                    output.shapes.iter().filter_map(|shape| if let egui::Shape::Text(text) = &shape.shape { Some(text) } else { None }).collect();
+                let hint = text_shapes.iter().find(|text| text.galley.job.text == placeholder);
+                if width >= 400.0 {
+                    let hint = hint.expect("room for the whole hint");
+                    let shortcut = text_shapes.iter().find(|text| text.galley.job.text.contains('K')).unwrap();
+                    assert_eq!(shortcut.galley.job.text, expected);
+                    assert!(!hint.galley.elided);
+                    assert!(hint.pos.x + hint.galley.size().x <= shortcut.pos.x - 9.0, "hint must leave a gap before the shortcut at width {width}");
+                } else if width <= 160.0 {
+                    assert!(hint.is_none(), "no room: a search button at width {width}");
+                }
+                for text in &text_shapes {
+                    assert!(!text.galley.elided, "{:?} cut at width {width}", text.galley.job.text);
+                }
                 output.drop_without_applying_deltas();
             }
         }
