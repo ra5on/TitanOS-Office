@@ -576,6 +576,9 @@ pub struct DocView {
     pub hold_rasters: bool,
     viewport_w: f32,
     viewport_h: f32,
+    /// The narrow layout ([`crate::compact`]): no quick bar floats beside the pages, so their
+    /// gutters are thin ([`Self::side`]). Set every frame from the window.
+    pub(crate) narrow: bool,
     page_count: usize,
     /// Page heights in points (view space), for mapping text positions to scroll offsets.
     page_heights: Vec<f32>,
@@ -984,6 +987,7 @@ impl DocView {
             hold_rasters: false,
             viewport_w: 800.0,
             viewport_h: 600.0,
+            narrow: false,
             page_count: info.pages.len(),
             page_heights: info.pages.iter().map(|p| p.height).collect(),
             screen_rects: Vec::new(),
@@ -2541,11 +2545,11 @@ fn page_scroll_area(ui: &egui::Ui, view: &mut DocView, geometry: &ScrollGeometry
         // The page counts with its side gutters, which keep its edge clear of the floating
         // quick-action bar as the layout does.
         let (x, w) = (view.last_scroll.x, avail.width());
-        let (left, right) = (r.left() - SIDE, r.right() + SIDE);
+        let (left, right) = (r.left() - view.side(), r.right() + view.side());
         // Turned by → / ← at an edge (`goto_side`): a page or spread wider than the window starts at
         // the edge the reader comes from.
         let row = shown_row(view, rects).iter().filter_map(|&i| rects.get(i)).copied().reduce(Rect::union).unwrap_or(r);
-        let (row_left, row_right) = (row.left() - SIDE, row.right() + SIDE);
+        let (row_left, row_right) = (row.left() - view.side(), row.right() + view.side());
         let target = match side {
             Some(from_right) if row_right - row_left > w => {
                 if from_right {
@@ -2919,6 +2923,7 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
     } else {
         ui.data(|d| d.get_temp(can_paste_key)).unwrap_or(false)
     };
+    app.views[index].narrow = app.compact;
     // Keyboard scrolling applies to this frame's page view only, never later.
     let key_scroll = std::mem::take(&mut app.views[index].key_scroll);
     let key_side = std::mem::take(&mut app.views[index].key_side);
@@ -3568,8 +3573,9 @@ fn apply_frame_requests(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui, 
         app.notify_tr(notice);
     }
     // Read mode hides the tools (#2646), and full screen is the page and nothing else (#1459);
-    // the quick tools come back with the window.
-    if app.mode != crate::Mode::Read && !app.full_screen {
+    // the quick tools come back with the window. The narrow layout has no room beside the page
+    // for them: its tools are in the Tools pane.
+    if app.mode != crate::Mode::Read && !app.full_screen && !app.compact {
         // The page nearest the left edge, whose margin the bar sits in.
         let page_left = app.views[index].screen_rects.iter().map(|(_, r)| r.left()).reduce(f32::min);
         quick_bar(app, avail, page_left, ui);

@@ -37,16 +37,17 @@ pub fn left_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
 pub(crate) fn panel_header(ui: &mut egui::Ui, t: &Tokens, title: &str, lead: Option<(&str, &str)>) -> (bool, bool) {
     let mut go_back = false;
     let mut close = false;
+    let button = crate::compact::pane_button(ui.ctx());
     ui.horizontal(|ui| {
         if let Some((icon, tip)) = lead
-            && icons::button(ui, icon, 26.0, false, tip).clicked()
+            && icons::button(ui, icon, button, false, tip).clicked()
         {
             go_back = true;
         }
         // Reserve space for Close before laying out the translated title. Long tool names
         // must never expand the fixed-width sidebar or push the Close control off-screen: a name
         // wider than its room wraps onto a second line instead of being cut.
-        let title_width = (ui.available_width() - 26.0 - ui.spacing().item_spacing.x).max(1.0);
+        let title_width = (ui.available_width() - button - ui.spacing().item_spacing.x).max(1.0);
         let font = theme::semibold(15.5);
         let fits = widgets::text_width(ui, tl!(title), &font) <= title_width;
         let label = egui::Label::new(egui::RichText::new(tl!(title)).font(font).color(t.text));
@@ -58,7 +59,7 @@ pub(crate) fn panel_header(ui: &mut egui::Ui, t: &Tokens, title: &str, lead: Opt
                 ui.add(label.wrap());
             });
         }
-        if icons::button(ui, "x", 26.0, false, tl!("Close panel")).clicked() {
+        if icons::button(ui, "x", button, false, tl!("Close panel")).clicked() {
             close = true;
         }
     });

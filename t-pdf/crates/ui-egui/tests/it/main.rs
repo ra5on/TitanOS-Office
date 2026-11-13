@@ -59,6 +59,7 @@ mod pageboxes;
 mod panel_snapshots;
 mod paste_ownership;
 mod pdf_links;
+mod phone;
 mod pickers;
 mod pinned_tools;
 mod pointer;

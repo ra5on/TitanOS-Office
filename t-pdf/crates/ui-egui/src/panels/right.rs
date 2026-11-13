@@ -79,7 +79,7 @@ pub fn right_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                         ui.label(egui::RichText::new(picked).font(theme::medium(12.0)).color(t.accent_text));
                     }
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if icons::button(ui, "x", 26.0, false, tl!("Close")).clicked() {
+                        if icons::button(ui, "x", crate::compact::pane_button(ui.ctx()), false, tl!("Close")).clicked() {
                             close = true;
                         }
                         if panel == RightPanel::Pages

@@ -126,6 +126,7 @@ use persist::recovery;
 pub use persist::units;
 #[cfg(not(target_arch = "wasm32"))]
 pub use persist::window_state;
+pub use platform::compact;
 use platform::drag_pointer;
 use platform::file_filter;
 #[cfg(not(target_arch = "wasm32"))]
@@ -332,6 +333,15 @@ pub struct PdfCraftApp {
     pub system_text_scale: f32,
     /// The interface size last given to egui ([`ui_scale::sync`]).
     ui_scale_applied: Option<f32>,
+    /// The narrow layout for phones ([`compact`]), from the window's size this frame.
+    pub(crate) compact: bool,
+    /// The narrow layout's touch-sized controls last given to egui ([`compact::sync_style`]).
+    compact_style: Option<bool>,
+    /// In the narrow layout, the pane that covers the page while it is chosen, instead of sitting
+    /// beside it ([`side_panels::follow_compact`]). Never saved.
+    pub(crate) compact_pane: Option<side_panels::Pane>,
+    /// Whether the Tools pane was open last frame, for [`side_panels::follow_compact`].
+    compact_tools_seen: Option<bool>,
     /// Preferences: bake Fill & Sign marks into the page when saving. Off, so a normal save stays editable.
     pub flatten_fill_sign_on_save: bool,
     /// Point size for new Fill & Sign text and dates, kept across launches.

@@ -752,7 +752,10 @@ fn narrow_tab_strips_accept_vertical_wheel_scrolling() {
         h.get_by(|n| n.role() == egui::accesskit::Role::Tab && n.label().as_deref() == Some("narrow-11.pdf")).click();
         h.run_steps(4);
         assert_eq!(h.state().active, Some(11));
-        assert!(h.get_by_label_contains("Display theme:").rect().right() <= width);
+        // The phone layout keeps the theme button in its "⋯" menu.
+        let theme = if width < pdfcraft_ui_egui::compact::MAX_WIDTH { "More" } else { "Display theme:" };
+        let rights: Vec<f32> = h.query_all_by_label_contains(theme).map(|n| n.rect().right()).collect();
+        assert!(!rights.is_empty() && rights.iter().all(|r| *r <= width), "{theme}: {rights:?}");
         if let Ok(dir) = std::env::var("PDFCRAFT_TAB_SHOTS") {
             let _gpu = crate::gpu();
             crate::support::settle(&mut h);

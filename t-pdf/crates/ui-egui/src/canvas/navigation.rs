@@ -1,5 +1,5 @@
 use super::zoom::GRID_ZOOM_STEP;
-use super::{DestView, DocInfo, DocView, Fit, PT, PageLayout, SIDE, ViewAction, pos2, vec2};
+use super::{DestView, DocInfo, DocView, Fit, PT, PageLayout, ViewAction, pos2, vec2};
 
 impl DocView {
     /// Where a bookmark made now should go: the page and the `/XYZ` position `[left, top]` in user
@@ -71,7 +71,7 @@ impl DocView {
         if !area.is_positive() {
             return None;
         }
-        let corner = area.min + vec2(SIDE, 0.0);
+        let corner = area.min + vec2(self.side(), 0.0);
         let (page, xf) = self
             .screen_xforms
             .iter()
@@ -82,7 +82,7 @@ impl DocView {
         // `max` drops a NaN size, so the bounds stay ordered and `clamp` can't panic.
         let (x, y) = (x.clamp(0.0, p.width.max(0.0)), y.clamp(0.0, p.height.max(0.0)));
         // The page counts with its side gutters, as the layout places it.
-        let wide = xf.rect.width() + 2.0 * SIDE > area.width();
+        let wide = xf.rect.width() + 2.0 * self.side() > area.width();
         let tall = xf.rect.height() > area.height();
         // The view's x runs across the screen unless the view is turned a quarter.
         let (keep_x, keep_y) = if xf.rot.is_multiple_of(180) { (wide, tall) } else { (tall, wide) };
@@ -144,7 +144,7 @@ impl DocView {
         let point = |x: Option<f32>, y: Option<f32>| p.dest_fraction(x, y, self.rotation);
         // The window's top-left as far as pages go: its left edge is the gutter that keeps them
         // clear of the floating quick-action bar, so `left` 0 shows the page's edge beside it.
-        let corner = vec2(SIDE, 0.0);
+        let corner = vec2(self.side(), 0.0);
         let (fx, fy, rel) = match dest {
             DestView::Top => return,
             DestView::Xyz { left, top, zoom } => {

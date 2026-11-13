@@ -106,6 +106,10 @@ impl PdfCraftApp {
             ui_scale: None,
             system_text_scale: 1.0,
             ui_scale_applied: None,
+            compact: false,
+            compact_style: None,
+            compact_pane: None,
+            compact_tools_seen: None,
             flatten_fill_sign_on_save: false,
             fill_text_size: fill_sign::TEXT_SIZE,
             fill_tool: fill_sign::FillTool::Signature,
@@ -654,6 +658,9 @@ impl eframe::App for PdfCraftApp {
             ctx.request_repaint();
             return;
         }
+        // A phone's narrow window: the page takes the width, controls are touch-sized (PLAN §87).
+        self.compact = compact::is_compact(ctx.content_rect().size());
+        compact::sync_style(&ctx, self.compact, &mut self.compact_style);
         // Before any widget reads this frame's wheel input or draws.
         self.motion.begin_pass(&ctx, self.animation_effects);
         // One-time 0.36 -> 0.37 panel persistence migration, before any panel stores or reads state.
@@ -711,10 +718,17 @@ impl eframe::App for PdfCraftApp {
         if self.all_tools_full && self.all_tools_tab != self.shown_tab() {
             self.all_tools_full = false;
         }
+        side_panels::follow_compact(self);
+        if self.compact_pane.is_none() {
+            chrome::compact_nav(self, ui);
+        }
         side_panels::show(self, ui);
         let t = theme::Tokens::get(&ctx);
-        egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.pasteboard)).show(ui, |ui| {
-            if self.mode == Mode::AllTools && self.all_tools_full {
+        let fill = if self.compact_pane.is_some() { t.panel } else { t.pasteboard };
+        egui::CentralPanel::default().frame(egui::Frame::NONE.fill(fill)).show(ui, |ui| {
+            if let Some(pane) = self.compact_pane {
+                side_panels::compact_pane(self, ui, pane);
+            } else if self.mode == Mode::AllTools && self.all_tools_full {
                 all_tools_ui::show(self, ui);
             } else {
                 match self.active {

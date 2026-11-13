@@ -54,6 +54,10 @@ impl PdfCraftApp {
 
     pub(crate) fn reveal_tools(&mut self) {
         self.left_open = true;
+        // The narrow layout shows the pane over the page (`side_panels::follow_compact`).
+        if self.compact {
+            self.compact_pane = Some(crate::side_panels::Pane::Tools);
+        }
     }
 
     /// Enter a tool from the catalogue, Home, palette or control channel. Organize is a
@@ -185,6 +189,10 @@ impl PdfCraftApp {
         self.right = panel;
         if let Some(panel) = panel {
             self.last_right = panel;
+            // The narrow layout shows the chosen panel over the page (`side_panels::follow_compact`).
+            if self.compact {
+                self.compact_pane = Some(crate::side_panels::Pane::Side);
+            }
         }
     }
 
