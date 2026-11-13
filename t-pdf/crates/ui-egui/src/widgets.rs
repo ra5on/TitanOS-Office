@@ -33,12 +33,39 @@ pub fn modal(ctx: &egui::Context, id: impl std::hash::Hash + std::fmt::Debug) ->
     egui::Modal::new(egui::Id::unique(id)).frame(dialog_frame(ctx))
 }
 
-/// Show [`modal`], outline its controls, and remember the card rect for layout checks.
+/// Room around a dialog's card where the window is no wider or taller than the dialog (a phone).
+const DIALOG_MARGIN: f32 = 8.0;
+
+/// The most a dialog's content may take: the window less the card's padding and a margin on each
+/// side.
+pub fn dialog_room(ctx: &egui::Context) -> egui::Vec2 {
+    let pad = vec2(f32::from(DIALOG_PAD_X), f32::from(DIALOG_PAD_Y)) + vec2(DIALOG_MARGIN, DIALOG_MARGIN);
+    (ctx.content_rect().size() - 2.0 * pad).max(vec2(120.0, 120.0))
+}
+
+/// Give a dialog's content (or a column of it) its `width`, or less on a window narrower than the
+/// dialog (a phone): its rows wrap there instead of running off the screen.
+pub fn dialog_width(ui: &mut egui::Ui, width: f32) {
+    ui.set_width(width.min(dialog_room(ui.ctx()).x));
+}
+
+/// Show [`modal`], outline its controls, and remember the card rect for layout checks. In the
+/// narrow layout ([`crate::compact`]) a dialog taller than the window scrolls inside its card.
 pub fn show_modal<R>(ctx: &egui::Context, id: &str, content: impl FnOnce(&mut egui::Ui) -> R) -> egui::ModalResponse<R> {
     let stored = egui::Id::unique(id);
+    let room = dialog_room(ctx);
+    let narrow = crate::compact::is_compact(ctx.content_rect().size());
     modal(ctx, id).show(ctx, |ui| {
         begin_dialog(ui);
-        let inner = content(ui);
+        let inner = if narrow {
+            ui.set_max_width(room.x);
+            // Bounded both ways. The dialogs ask for less than the window's width ([`dialog_width`]),
+            // and the rows of the common ones wrap; what still does not fit (a row of fixed fields)
+            // scrolls inside the card rather than push it off the screen.
+            egui::ScrollArea::both().id_salt(stored.with("scroll")).max_width(room.x).max_height(room.y).show(ui, content).inner
+        } else {
+            content(ui)
+        };
         // The frame's stroke sits outside this content rect; the stored card is the fill.
         let card = ui.min_rect().expand2(egui::vec2(f32::from(DIALOG_PAD_X), f32::from(DIALOG_PAD_Y)));
         ui.ctx().data_mut(|d| d.insert_temp(stored.with("card"), card));

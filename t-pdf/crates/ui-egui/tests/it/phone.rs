@@ -1,6 +1,6 @@
 //! The narrow layout on a phone (TitanOS PLAN §87): the page takes the width when a document
-//! opens, a finger pans it and a double tap zooms it, the top bars stay on the screen, and a
-//! desktop window keeps its panes, rail and tabs.
+//! opens, a finger pans it and a double tap zooms it, the top bars and the dialogs stay on the
+//! screen, and a desktop window keeps its panes, rail and tabs.
 
 use egui::accesskit::Role;
 use egui::{Event, Modifiers, PointerButton, Pos2, TouchDeviceId, TouchId, TouchPhase, Vec2, pos2, vec2};
@@ -129,6 +129,43 @@ fn the_top_bars_of_a_phone_stay_on_the_screen_with_touch_sized_buttons() {
             assert!(r.right() <= size.x + 0.5, "{size:?}: a button at {r:?} runs off the screen");
         }
     }
+}
+
+#[test]
+fn dialogs_fit_a_phone() {
+    let mut off = Vec::new();
+    for size in [PORTRAIT, LANDSCAPE] {
+        for dialog in [
+            "properties",
+            "security",
+            "fonts",
+            "custom",
+            "advanced",
+            "preferences",
+            "shortcuts",
+            "split",
+            "protect",
+            "page-boxes",
+            "header-footer",
+            "watermark",
+            "export-image",
+            "export-text",
+            "word-count",
+            "optimize",
+            "recognize-text",
+            "action-wizard",
+        ] {
+            let mut h = window(size);
+            h.state_mut().set_option("dialog", dialog).unwrap();
+            h.run_steps(8);
+            let card: egui::Rect = h.ctx.data(|d| d.get_temp(egui::Id::unique("dialog").with("card"))).unwrap_or_else(|| panic!("{dialog}: no card"));
+            let screen = egui::Rect::from_min_size(Pos2::ZERO, size);
+            if !screen.contains_rect(card) {
+                off.push(format!("{size:?}: {dialog}'s card {card:?}"));
+            }
+        }
+    }
+    assert!(off.is_empty(), "off the screen:\n{}", off.join("\n"));
 }
 
 #[test]

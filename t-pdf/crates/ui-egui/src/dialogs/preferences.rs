@@ -43,6 +43,15 @@ pub fn segmented_pill_choice_a11y_query<T: PartialEq + Copy>(
 ) -> (bool, Option<egui::Response>) {
     let mut changed = false;
     let mut first_match_resp: Option<egui::Response> = None;
+    // In a row that wraps (a phone), the choices start a new line when the rest of this one can't
+    // hold them all.
+    if ui.layout().main_wrap() {
+        let font = theme::medium(12.0);
+        let width = options.iter().map(|(_, label, _)| widgets::text_width(ui, label, &font) + 20.0).sum::<f32>() + 6.0;
+        if left_on_line(ui) < width {
+            ui.end_row();
+        }
+    }
     egui::Frame::new()
         .fill(t.field)
         .stroke(Stroke::new(1.0, t.border))
@@ -50,7 +59,8 @@ pub fn segmented_pill_choice_a11y_query<T: PartialEq + Copy>(
         .inner_margin(Margin::symmetric(2, 2))
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
-            ui.horizontal(|ui| {
+            // On a phone the choices wrap inside their frame rather than push the dialog wider.
+            let pills = |ui: &mut egui::Ui| {
                 for &(value, label, a11y_label) in options {
                     let is_active = *current == value;
                     let font = theme::medium(12.0);
@@ -89,7 +99,12 @@ pub fn segmented_pill_choice_a11y_query<T: PartialEq + Copy>(
                         changed = true;
                     }
                 }
-            });
+            };
+            if crate::compact::is_compact(ui.ctx().content_rect().size()) {
+                ui.horizontal_wrapped(pills);
+            } else {
+                ui.horizontal(pills);
+            }
         });
     (changed, first_match_resp)
 }
@@ -471,16 +486,23 @@ pub(crate) fn preferences_header(ui: &mut egui::Ui, t: &Tokens) {
     // Allocate the full available width so the search bar aligns flush with the card boxes below.
     let full_w = ui.available_width();
     let header_h = 30.0;
-    let (header_rect, _) = ui.allocate_exact_size(vec2(full_w, header_h), Sense::hover());
+    let search_w = 230.0;
+    // Too narrow for both side by side (a phone): the search bar goes below the title, as wide as
+    // the cards.
+    let stacked = full_w < 240.0 + search_w;
+    let (header_rect, _) = ui.allocate_exact_size(vec2(full_w, if stacked { 2.0 * header_h + 8.0 } else { header_h }), Sense::hover());
 
     // Title on the left, vertically centered in the header row:
-    let title_rect = Rect::from_min_max(header_rect.min, pos2(header_rect.min.x + 240.0, header_rect.max.y));
+    let title_rect = Rect::from_min_max(header_rect.min, pos2(header_rect.min.x + 240.0, header_rect.min.y + header_h));
     let mut title_ui = ui.new_child(egui::UiBuilder::new().max_rect(title_rect).layout(egui::Layout::left_to_right(egui::Align::Center)));
     title_ui.label(RichText::new(tl!("Preferences")).font(theme::semibold(18.0)).color(t.text));
 
     // Search bar on the right, right edge flush with the card box boundary:
-    let search_w = 230.0;
-    let search_rect = Rect::from_min_max(pos2(header_rect.max.x - search_w, header_rect.min.y), header_rect.max);
+    let search_rect = if stacked {
+        Rect::from_min_max(pos2(header_rect.min.x, header_rect.max.y - header_h), header_rect.max)
+    } else {
+        Rect::from_min_max(pos2(header_rect.max.x - search_w, header_rect.min.y), header_rect.max)
+    };
     let match_count = (!query.trim().is_empty()).then_some(last_matches);
     let before = query.clone();
     preference_search_box_at(ui, t, &mut query, match_count, search_rect);
@@ -556,9 +578,31 @@ pub(crate) fn preferences_body(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tok
     }
 }
 
+/// A row of settings side by side, which wraps onto more lines where the dialog is narrower than
+/// the row (a phone, [`crate::compact`]).
+fn row<R>(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui) -> R) -> egui::InnerResponse<R> {
+    if crate::compact::is_compact(ui.ctx().content_rect().size()) { ui.horizontal_wrapped(add) } else { ui.horizontal(add) }
+}
+
+/// The room left on the current line of a row that wraps (`available_width` is the whole line's).
+fn left_on_line(ui: &egui::Ui) -> f32 {
+    ui.max_rect().right() - ui.cursor().left()
+}
+
+/// The gap between two settings in a [`row`]. Where the row wraps (a phone), the next setting
+/// starts a new line when this one has too little room left for it: a gap at a line's end would
+/// push the dialog wider than the screen.
+fn gap(ui: &mut egui::Ui) {
+    if ui.layout().main_wrap() && left_on_line(ui) < 160.0 {
+        ui.end_row();
+    } else {
+        ui.add_space(16.0);
+    }
+}
+
 /// Content for Card 1: General & Interface
 fn card_general(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut PrefSearchContext) {
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         let label = ctx.label_primary(ui, tl!("Interface language"), t);
         let (selected, picker) = {
             let drawable = |text: &str| picker_text_is_drawable(ui, text);
@@ -590,7 +634,7 @@ fn card_general(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut 
             crate::i18n::set_current(crate::i18n::Lang::from_pref(&app.language));
         }
 
-        ui.add_space(16.0);
+        gap(ui);
         use crate::ui_scale;
         let label_size = ctx.label_primary(ui, tl!("Interface size"), t);
         let native = ui.ctx().native_pixels_per_point().unwrap_or(1.0);
@@ -618,7 +662,7 @@ fn card_general(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut 
     ctx.label_secondary(ui, tl!("Auto follows the system's text size. Pages always render at the display's full resolution."), t);
     ui.add_space(6.0);
 
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         ctx.label_primary(ui, tl!("Tools panel side"), t);
         let right = app.side_panels.tools_on_right();
         let mut side = if right { ToolsSide::Right } else { ToolsSide::Left };
@@ -626,7 +670,7 @@ fn card_general(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut 
             app.side_panels.tools_side = side;
         }
 
-        ui.add_space(16.0);
+        gap(ui);
         ctx.label_primary(ui, tl!("Navigation rail side"), t);
         let rail_right = app.side_panels.rail_on_right();
         let mut rside = if rail_right { ToolsSide::Right } else { ToolsSide::Left };
@@ -638,7 +682,7 @@ fn card_general(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut 
     });
     ui.add_space(6.0);
 
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         ctx.label_primary(ui, tl!("Animation effects"), t);
         ctx.pill_choice(
             ui,
@@ -665,7 +709,7 @@ fn card_general(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut 
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        ui.horizontal(|ui| {
+        row(ui, |ui| {
             let label = ctx.label_primary(ui, tl!("Recent files to keep"), t);
             ui.add(egui::DragValue::new(&mut app.recent_limit).range(0..=crate::RECENT_FILES_MAX)).labelled_by(label.id);
         });
@@ -692,7 +736,7 @@ fn card_appearance(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &m
 
 /// Content for Card 3: Documents and View
 fn card_documents_and_view(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut PrefSearchContext) {
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         ctx.label_primary(ui, tl!("Default workspace mode"), t);
         ctx.pill_choice(
             ui,
@@ -711,7 +755,7 @@ fn card_documents_and_view(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens,
     ui.add_space(6.0);
 
     let defaults = &mut app.view_defaults;
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         ctx.label_primary(ui, tl!("Default page display"), t);
         let mut layout_choice = defaults.layout;
         if ctx.pill_choice(ui, t, &mut layout_choice, &[(PageLayout::Single, tl!("Single page")), (PageLayout::TwoUp, tl!("Two-page view"))]) {
@@ -726,7 +770,7 @@ fn card_documents_and_view(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens,
     ctx.label_secondary(ui, tl!("Hide gaps to join page edges. Margins inside the PDF remain unchanged."), t);
     ui.add_space(6.0);
 
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         ctx.label_primary(ui, tl!("Default zoom"), t);
         ctx.pill_choice(
             ui,
@@ -743,7 +787,7 @@ fn card_documents_and_view(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens,
     ctx.checkbox(ui, &mut app.always_default_view, tl!("Always use my default zoom and page layout"), t);
     ui.add_space(6.0);
 
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         ctx.label_primary(ui, tl!("Units"), t);
         ctx.pill_choice(
             ui,
@@ -764,7 +808,7 @@ fn card_documents_and_view(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens,
 
 /// The scroll speed and the middle button's direction, in Card 3.
 fn scrolling(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut PrefSearchContext) {
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         ctx.label_primary(ui, tl!("Scroll speed (mouse wheel and arrow keys)"), t);
         ctx.pill_choice(
             ui,
@@ -784,7 +828,7 @@ fn scrolling(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut Pre
 
 /// Content for Card 4: Identity
 fn card_identity(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut PrefSearchContext) {
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         let label = ctx.label_primary(ui, tl!("Name on new comments"), t);
         ui.add(crate::widgets::line(&mut app.comment_prefs.author).desired_width(240.0).char_limit(crate::MAX_AUTHOR_CHARS)).labelled_by(label.id);
     });
@@ -833,7 +877,7 @@ fn date_format(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut P
     use pdfcraft_engine::dates::{DATE_FORMATS, DATE_LANGUAGES, MAX_DATE_FORMAT_CHARS};
     ctx.label(ui, tl!("Date format"), theme::semibold(12.5), t.text);
     let sample = |app: &PdfCraftApp, f: &str| format!("{}   {f}", app.date_text(Some(f)).unwrap_or_default());
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         let label = ctx.label_primary(ui, tl!("Fill & Sign dates"), t);
         let current = app.session.date_format().to_string();
         let selected = if DATE_FORMATS.contains(&current.as_str()) { sample(app, &current) } else { tl!("Custom").to_string() };
@@ -851,7 +895,7 @@ fn date_format(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut P
             .response
             .labelled_by(label.id);
     });
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         let label = ctx.label_primary(ui, tl!("Pattern"), t);
         let mut text = app.date_format_draft.clone().unwrap_or_else(|| app.session.date_format().to_string());
         let edit = ui.add(egui::TextEdit::singleline(&mut text).desired_width(160.0).char_limit(MAX_DATE_FORMAT_CHARS)).labelled_by(label.id);
@@ -880,7 +924,7 @@ fn date_format(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, ctx: &mut P
         );
         ctx.label(ui, &bad_msg, theme::regular(13.0), Color32::from_rgb(0xD1, 0x3B, 0x3B));
     }
-    ui.horizontal(|ui| {
+    row(ui, |ui| {
         let label = ctx.label_primary(ui, tl!("Language"), t);
         let (follow, selected, current, names) = {
             let drawable = |text: &str| picker_text_is_drawable(ui, text);
@@ -938,7 +982,7 @@ fn reading_colours_section(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens,
                 only_black: false,
                 line_art: true,
             });
-            ui.vertical(|ui| {
+            let choice = |ui: &mut egui::Ui| {
                 ui.set_width(100.0);
                 let sample = RichText::new("Aa").size(20.0).color(Color32::from_rgb(params.text[0], params.text[1], params.text[2]));
                 let button = egui::Button::new(sample)
@@ -951,7 +995,14 @@ fn reading_colours_section(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens,
                     app.set_reading_colors(colors);
                 }
                 ctx.label(ui, tl!(label), theme::regular(12.0), t.text);
-            });
+            };
+            // Sized up front where the row wraps (a phone), so a choice that has no room left
+            // on a line starts the next: a column of its own never wraps.
+            if ui.layout().main_wrap() && crate::compact::is_compact(ui.ctx().content_rect().size()) {
+                ui.allocate_ui_with_layout(vec2(100.0, 66.0), egui::Layout::top_down(egui::Align::Min), choice);
+            } else {
+                ui.vertical(choice);
+            }
         }
     });
     ui.add_space(4.0);
@@ -970,7 +1021,7 @@ fn reading_colours_section(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens,
         let mut colors = if app.reading_colors.params.is_some() { app.reading_colors } else { pdfcraft_render::ReadingColors::BLACK_ON_WHITE };
         let mut changed = false;
         if let Some(params) = colors.params.as_mut() {
-            ui.horizontal(|ui| {
+            row(ui, |ui| {
                 let text = ctx.label_primary(ui, tl!("Text"), t);
                 changed |= ui.color_edit_button_srgb(&mut params.text).labelled_by(text.id).changed();
                 let background = ctx.label_primary(ui, tl!("Page background"), t);
