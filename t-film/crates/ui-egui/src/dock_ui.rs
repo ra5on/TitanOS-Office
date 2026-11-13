@@ -38,27 +38,34 @@ const TAB_PADDING: f32 = 24.0;
 /// `OVERFLOW_WIDTH`), drawn beside the shown tab of a group of several panels.
 const OVERFLOW_WIDTH: f32 = 22.0;
 
-/// The panels that share their group with others: beside the tab such a group shows, its "…"
-/// button may need room too.
-fn grouped_panels(layout: &Layout<PanelKind>) -> std::collections::HashSet<PanelKind> {
-    fn walk(node: &Node<PanelKind>, out: &mut std::collections::HashSet<PanelKind>) {
+/// The panels each group shows (its active tab), and those of them that share their group with
+/// others: beside such a tab the group's "…" button may need room too.
+fn shown_panels(layout: &Layout<PanelKind>) -> (Vec<PanelKind>, Vec<PanelKind>) {
+    fn walk(node: &Node<PanelKind>, shown: &mut Vec<PanelKind>, grouped: &mut Vec<PanelKind>) {
         match node {
-            Node::Tabs { panels, .. } if panels.len() > 1 => out.extend(panels.iter().copied()),
+            Node::Tabs { panels, active } => {
+                if let Some(panel) = panels.get(*active).or(panels.first()) {
+                    shown.push(*panel);
+                    if panels.len() > 1 {
+                        grouped.push(*panel);
+                    }
+                }
+            }
             Node::Split { first, second, .. } => {
-                walk(first, out);
-                walk(second, out);
+                walk(first, shown, grouped);
+                walk(second, shown, grouped);
             }
             _ => {}
         }
     }
-    let mut out = std::collections::HashSet::new();
+    let (mut shown, mut grouped) = (Vec::new(), Vec::new());
     if let Some(root) = &layout.root {
-        walk(root, &mut out);
+        walk(root, &mut shown, &mut grouped);
     }
     for window in &layout.floating {
-        walk(&window.root, &mut out);
+        walk(&window.root, &mut shown, &mut grouped);
     }
-    out
+    (shown, grouped)
 }
 
 /// A panel's name on its tab, in the interface language. The German Audio Meters tab is one short
@@ -68,18 +75,18 @@ fn tab_label(panel: PanelKind) -> &'static str {
     crate::i18n::tr_ctx("panel tab", panel.title())
 }
 
-/// The narrowest each panel's group is drawn, so that its tab shows the whole name whenever the
-/// panel is the one shown: the name, the tab's padding, the drag bar and the ≡ menu, and for the
-/// Timeline its sequence tabs, which take at most two thirds of the strip. Tabs that do not fit go
-/// to the group's "…" menu (whose button is counted for a panel that shares its group), but the
-/// shown tab has nowhere to go: a narrower group would cut its name with "…" (the Audio Meters
-/// column, the right-hand columns in a narrow window). The Tools column shows no tab at all and
-/// keeps its width.
+/// The narrowest each group is drawn, so that the tab it shows has its whole name: the name, the
+/// tab's padding, the drag bar and the ≡ menu, the "…" button of a group of several panels, and
+/// for the Timeline its sequence tabs, which take at most two thirds of the strip. The other tabs
+/// go to the group's "…" menu, but the shown tab has nowhere to go: a narrower group would cut its
+/// name with "…" (the Audio Meters column, the right-hand columns in a narrow window). Only the
+/// shown panel of a group asks for room, so the window's width goes to what is on screen; the
+/// Tools column shows no tab at all and keeps its width.
 fn tab_min_widths(ui: &egui::Ui, style: &DockStyle, layout: &Layout<PanelKind>, seqs: &SeqTabs, seq_width: f32) -> HashMap<PanelKind, f32> {
-    let grouped = grouped_panels(layout);
+    let (shown, grouped) = shown_panels(layout);
     PanelKind::ALL
         .iter()
-        .filter(|panel| **panel != PanelKind::Tools)
+        .filter(|panel| **panel != PanelKind::Tools && shown.contains(panel))
         .map(|&panel| {
             let label = if panel == PanelKind::Timeline && seqs.open.is_empty() { seqs.label() } else { tab_label(panel).to_string() };
             let name = ui.painter().layout_no_wrap(label, style.font.clone(), egui::Color32::WHITE).size().x.ceil();
