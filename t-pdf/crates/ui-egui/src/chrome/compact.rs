@@ -111,14 +111,15 @@ pub(super) fn mode_bar_rest(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
         if icons::button(ui, "search", TOUCH, false, &tip).clicked() {
             app.palette_open = true;
         }
-        // A phone on its side: the page and zoom controls here, and the height to the page.
-        if nav_in_mode_bar(ui.ctx())
-            && let Some((index, count)) = nav_view(app)
-        {
+        // Where they fit (a phone on its side), the page and zoom controls go here and leave the
+        // height to the page; else they get a bar below it ([`compact_nav`]).
+        if let Some((index, count)) = nav_view(app) {
             let width = app.views.get(index).map_or(f32::INFINITY, |view| nav_widths(ui, view, count).2);
             if ui.available_width() >= width + NAV_GAP {
                 ui.add_space(NAV_GAP);
                 ui.allocate_ui_with_layout(vec2(width, TOUCH), Layout::left_to_right(Align::Center), |ui| nav_controls(app, ui, index, count, false));
+                let pass = ui.ctx().cumulative_pass_nr();
+                ui.ctx().data_mut(|d| d.insert_temp(nav_placed_id(), pass));
             }
         }
     });
@@ -158,14 +159,15 @@ fn document_menu(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     });
 }
 
-/// Wide enough (a phone on its side) that the page and zoom controls fit in the mode bar, which
-/// leaves the short window's height to the page.
-const NAV_IN_MODE_BAR: f32 = 600.0;
+/// Where the mode bar notes the pass it drew the page and zoom controls in.
+fn nav_placed_id() -> egui::Id {
+    egui::Id::unique("pdfcraft-compact-nav-in-mode-bar")
+}
 
-/// Where the page and zoom controls go in the narrow layout: the mode bar when the window is wide
-/// enough, else a bar of their own below the page.
+/// Whether the mode bar drew the page and zoom controls in this pass ([`mode_bar_rest`], which runs
+/// before [`compact_nav`]).
 fn nav_in_mode_bar(ctx: &egui::Context) -> bool {
-    ctx.content_rect().width() >= NAV_IN_MODE_BAR
+    ctx.data(|d| d.get_temp::<u64>(nav_placed_id())) == Some(ctx.cumulative_pass_nr())
 }
 
 /// The view the page and zoom controls act on, when there is a page to move through: not over a
@@ -243,8 +245,9 @@ fn nav_controls(app: &mut PdfCraftApp, ui: &mut egui::Ui, index: usize, count: u
     }
 }
 
-/// The bar below the page in the narrow layout, in place of the rail, when the mode bar has no
-/// room for its controls ([`nav_controls`]): the page steps at its start, the zoom at its end.
+/// The bar below the page in the narrow layout, in place of the rail, when the mode bar had no
+/// room for its controls in this pass ([`nav_controls`]): the page steps at its start, the zoom at
+/// its end.
 pub fn compact_nav(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     if nav_in_mode_bar(ui.ctx()) {
         return;
@@ -257,4 +260,17 @@ pub fn compact_nav(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
         .show(ui, |ui| {
             ui.horizontal_centered(|ui| nav_controls(app, ui, index, count, true));
         });
+}
+
+/// Full screen on a phone, which has no Esc key to leave it: a button in the top right corner.
+pub fn full_screen_exit(app: &mut PdfCraftApp, ctx: &egui::Context) {
+    let t = Tokens::get(ctx);
+    let at = ctx.content_rect().right_top() + vec2(-TOUCH - 12.0, 12.0);
+    egui::Area::new(egui::Id::unique("compact-full-screen-exit")).order(egui::Order::Foreground).fixed_pos(at).show(ctx, |ui| {
+        egui::Frame::NONE.fill(t.card).corner_radius(egui::CornerRadius::same(10)).stroke(Stroke::new(1.0, t.border)).show(ui, |ui| {
+            if icons::button(ui, "minimize-2", TOUCH, false, tl!("Leave full screen")).clicked() {
+                app.execute("view.full_screen");
+            }
+        });
+    });
 }

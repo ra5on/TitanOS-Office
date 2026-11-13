@@ -5,7 +5,7 @@ use egui::{Align, Color32, CornerRadius, Layout, Rect, Sense, Stroke, vec2};
 
 mod compact;
 
-pub use compact::compact_nav;
+pub use compact::{compact_nav, full_screen_exit};
 
 use crate::canvas::{DocView, Fit, PageLayout};
 use crate::theme::{self, ThemePreference, Tokens};

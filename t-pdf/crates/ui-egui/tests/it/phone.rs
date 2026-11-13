@@ -112,7 +112,10 @@ fn a_desktop_window_keeps_its_panes_rail_and_tabs() {
 
 #[test]
 fn the_top_bars_of_a_phone_stay_on_the_screen_with_touch_sized_buttons() {
-    for size in [PORTRAIT, LANDSCAPE] {
+    // The page and zoom controls in the mode bar where they fit (844 pt on its side), else in a
+    // bar below the page: always somewhere, also where the mode bar just lacks the room (600 pt
+    // on its side here, wider with the longer German labels).
+    for size in [PORTRAIT, LANDSCAPE, vec2(360.0, 740.0), vec2(640.0, 360.0), vec2(600.0, 360.0)] {
         let h = window(size);
         // The workspace menu is named for the workspace it shows.
         for label in ["Home", "More", "All tools", "Next page", "Previous page"] {
@@ -190,4 +193,17 @@ fn a_double_tap_zooms_in_and_back_to_the_width() {
     double_tap(&mut h, pos2(150.0, 400.0));
     let view = &h.state().views[0];
     assert!((view.zoom - fitted).abs() < 0.01 && view.fit == Fit::Width, "back to the width: {} {:?}", view.zoom, view.fit);
+}
+
+#[test]
+fn full_screen_on_a_phone_can_be_left_without_a_key() {
+    let mut h = window(PORTRAIT);
+    assert!(h.state_mut().execute("view.full_screen"));
+    h.run_steps(4);
+    assert!(h.state().full_screen);
+    h.get_by_label("Leave full screen").click();
+    h.run_steps(4);
+    assert!(!h.state().full_screen, "the button leaves full screen");
+    let h = window(DESKTOP);
+    assert!(h.query_by_label("Leave full screen").is_none());
 }

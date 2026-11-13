@@ -685,6 +685,10 @@ impl eframe::App for PdfCraftApp {
                     }
                 }
             });
+            // A phone has no Esc key to leave full screen with.
+            if self.compact {
+                chrome::full_screen_exit(self, &ctx);
+            }
             dialogs::show(self, &ctx);
             // Notices too: a refused field value or a failed save must be seen in full screen.
             self.show_progress(&ctx);
