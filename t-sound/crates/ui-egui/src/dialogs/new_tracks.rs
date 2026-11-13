@@ -144,7 +144,11 @@ impl NewTracks {
     pub(crate) fn show(&mut self, ui: &mut Ui, enter: bool) -> Option<Value> {
         let shortcut_row_action = self.keys(ui.ctx());
         let widths = RowWidths::new(ui);
-        ui.set_min_width(widths.total(ui));
+        let total = widths.total(ui);
+        // The rows keep their width. On a screen narrower than they are, the dialog fits the
+        // screen and the rows scroll sideways, so no control is off screen.
+        let room = (ui.ctx().content_rect().width() - 48.0).max(240.0);
+        ui.set_min_width(total.min(room));
         // The old row must not consume text on the first frame after adding a new one.
         if self.focus_count && ui.is_enabled() && !ui.is_sizing_pass() {
             ui.memory_mut(|m| {
@@ -156,11 +160,15 @@ impl NewTracks {
         let mut insert = None;
         let mut remove = None;
         let len = self.rows.len();
-        egui::ScrollArea::vertical().id_salt("new_tracks_rows").max_height(300.0).auto_shrink([false, true]).show(ui, |ui| {
+        egui::ScrollArea::both().id_salt("new_tracks_rows").max_height(300.0).max_width(total.min(room)).auto_shrink([false, true]).show(ui, |ui| {
+            ui.set_min_width(total);
             for (index, row) in self.rows.iter_mut().enumerate() {
                 // Explicit row IDs keep editing state with the row when rows above it are removed.
                 let id = egui::Id::unique(("new_tracks_row", row.key));
-                let rect = egui::Rect::from_min_size(ui.available_rect_before_wrap().min, vec2(ui.available_width(), ui.spacing().interact_size.y));
+                let rect = egui::Rect::from_min_size(
+                    ui.available_rect_before_wrap().min,
+                    vec2(ui.available_width().max(total), ui.spacing().interact_size.y),
+                );
                 ui.scope_builder(egui::UiBuilder::new().scope_id(id).max_rect(rect).layout(egui::Layout::left_to_right(egui::Align::Center)), |ui| {
                     let label = ui.label(crate::i18n::tr("Create"));
                     let counter = ui
