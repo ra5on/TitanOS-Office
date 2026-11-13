@@ -1,7 +1,9 @@
 //! Interface language (TitanOS-Office). The original has English text only, written where it is
 //! drawn. This is the smallest mechanism that changes that: the English text is the key, [`tr`]
 //! returns the row of the current language or the text itself, so anything without a row stays
-//! English. So far the menu bar goes through it; panels and dialogs still draw their own English.
+//! English. The menu bar, the edit window, the dialogs, the windows of the Setup and Window menus
+//! and the Preferences go through it; the mix window and the plug-in menus still draw their own
+//! English.
 //!
 //! The language is set once at start ([`set_language`]); the web build follows the browser.
 
