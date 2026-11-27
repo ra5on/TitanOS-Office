@@ -14,7 +14,7 @@ pub struct HostOpen {
     pub name: String,
     pub bytes: Vec<u8>,
 }
-type Listener = (String, Closure<dyn FnMut(CustomEvent)>);
+type Listener = (String, Closure<dyn Fn(CustomEvent)>);
 
 /// Installed exclusively for DOM events on the editor's own data-host=page canvas.
 #[derive(Clone)]
@@ -141,7 +141,7 @@ impl CanvasBridge {
         })?;
         Some(bridge)
     }
-    fn listen(&self, suffix: &str, mut f: impl FnMut(&Inner, CustomEvent) + 'static) -> Option<()> {
+    fn listen(&self, suffix: &str, f: impl Fn(&Inner, CustomEvent) + 'static) -> Option<()> {
         let weak = Rc::downgrade(&self.0);
         let listener = Closure::new(move |event: CustomEvent| {
             if let Some(inner) = weak.upgrade()
