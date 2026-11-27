@@ -1340,6 +1340,7 @@ dependencies = [
  "log",
  "rfd",
  "serde_json",
+ "titanos-agent-selection",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -4969,6 +4970,15 @@ dependencies = [
  "displaydoc",
  "serde_core",
  "zerovec",
+]
+
+[[package]]
+name = "titanos-agent-selection"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

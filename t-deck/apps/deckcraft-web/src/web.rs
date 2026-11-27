@@ -33,7 +33,8 @@ pub fn start() {
         if hosted && bridge.is_none() && query_param("host").as_deref() == Some("parent") {
             log::warn!("?host=parent needs a framing page on the same origin; saves download instead");
         }
-        let app_bridge = bridge.clone();
+        let mut app_bridge = bridge.clone();
+        let app_canvas = canvas.clone();
         let mut options = eframe::WebOptions::default();
         if query_has("webgl")
             && let eframe::egui_wgpu::WgpuSetup::CreateNew(create) = &mut options.wgpu_options.wgpu_setup
@@ -55,8 +56,8 @@ pub fn start() {
                     }
                     let inbox: Inbox = Inbox::default();
                     let mut services = services(inbox.clone(), cc.egui_ctx.clone());
-                    if let Some(bridge) = &app_bridge {
-                        bridge.connect(&mut services, cc.egui_ctx.clone());
+                    if let Some(bridge) = &mut app_bridge {
+                        bridge.connect(&mut services, cc.egui_ctx.clone(), &app_canvas);
                     }
                     // The interface follows the browser's language (German or English).
                     deckcraft_ui_egui::i18n::set_language(&browser_language());
