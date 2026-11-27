@@ -84,21 +84,48 @@ impl SheetApp {
             .map(|i| std::mem::take(&mut *i.lock().unwrap_or_else(std::sync::PoisonError::into_inner)))
             .unwrap_or_default();
         for (name, bytes) in arrived {
-            let b64 = gridcraft_engine::io::base64_encode(&bytes);
-            match self.run("file.open", json!({"name": &name, "base64": &b64})) {
-                // A file picked from File › Open (web) arrives here: show it, not the Backstage.
-                Ok(r) => {
-                    self.backstage = None;
-                    self.show_open_warnings(&r);
-                }
-                Err(e) if e.contains(gridcraft_engine::io::PASSWORD_REQUIRED) => {
-                    self.backstage = None;
-                    self.open_dialog("openPassword", json!({"name": name, "base64": b64}));
-                }
-                Err(e) => self.message = Some(("T-Exel".into(), clean_error(&e))),
-            }
-            self.after_engine();
+            self.open_received_bytes(&name, &bytes);
         }
+    }
+
+    /// Open these exact bytes and return the active workbook's session identity only
+    /// after a successful parse. Password prompts and failed imports cannot bind a
+    /// host request to a previously open workbook, even when the file names match.
+    pub fn open_received_bytes(&mut self, name: &str, bytes: &[u8]) -> Option<u64> {
+        let b64 = gridcraft_engine::io::base64_encode(bytes);
+        let uid = match self.run("file.open", json!({"name": name, "base64": &b64})) {
+            Ok(r) => {
+                self.after_open(None, &r);
+                self.session.active().map(|doc| doc.uid)
+            }
+            Err(e) if e.contains(gridcraft_engine::io::PASSWORD_REQUIRED) => {
+                self.backstage = None;
+                self.open_dialog("openPassword", json!({"name": name, "base64": b64}));
+                None
+            }
+            Err(e) => {
+                self.message = Some(("T-Exel".into(), clean_error(&e)));
+                None
+            }
+        };
+        self.after_engine();
+        uid
+    }
+
+    /// Hand an editable workbook or an independent export to its browser host.
+    pub(crate) fn deliver_download(&mut self, name: &str, bytes: &[u8], workbook: bool) -> bool {
+        if workbook && let (Some(save), Some(doc)) = (&self.services.save_workbook, self.session.active()) {
+            if let Err(e) = save(name, bytes, doc) {
+                self.message = Some(("T-Exel".into(), e));
+                return false;
+            }
+            return true;
+        }
+        if let Some(download) = &self.services.download {
+            download(name, bytes);
+            return true;
+        }
+        false
     }
 
     /// AutoSave: save workbooks that have a file shortly after they change. This decision lives in

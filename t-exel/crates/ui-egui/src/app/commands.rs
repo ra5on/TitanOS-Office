@@ -388,11 +388,10 @@ impl SheetApp {
                     }
                 } else if self.services.download.is_some()
                     && let Ok(r) = self.run("file.saveBytes", json!({"format": "xlsx"}))
-                    && let Some(dl) = &self.services.download
                     && let Some(b) = r.get("base64").and_then(Json::as_str).and_then(gridcraft_engine::io::base64_decode)
                 {
                     let name = r.get("name").and_then(Json::as_str).unwrap_or("Book.xlsx").to_string();
-                    dl(&name, &b);
+                    self.deliver_download(&name, &b, true);
                 }
             }
             // File › Options (`file.options`) and the File tab itself open the Backstage view.

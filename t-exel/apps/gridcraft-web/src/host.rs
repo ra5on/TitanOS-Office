@@ -23,11 +23,13 @@
 //! exports are handed to the page rather than downloaded, and `?author=` names the user for new
 //! notes and comments.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use craft_web_host::web::{FileData, Host, Message};
 use gridcraft_ui_egui::{Inbox, Services, SheetApp};
+use titanos_agent_selection::{CanvasBridge, Region, Selection};
 
 use crate::hostmode::open_name;
 
@@ -46,8 +48,32 @@ const MAX_AUTHOR_CHARS: usize = 200;
 #[derive(Clone)]
 pub struct Bridge {
     host: Rc<Host>,
+    canvas: web_sys::HtmlCanvasElement,
+    agent: Rc<RefCell<Option<CanvasBridge>>>,
+    bound: Rc<RefCell<Option<BoundWorkbook>>>,
+    pending: Rc<RefCell<Option<WorkbookSave>>>,
+    sequence: Rc<Cell<u64>>,
+    titanos: Rc<Cell<bool>>,
     /// Names of the files handed to the host since the last frame.
     saved: Rc<RefCell<Vec<String>>>,
+}
+
+struct WorkbookSave {
+    ticket: String,
+    uid: u64,
+    revision: u64,
+    snapshot: Arc<gridcraft_engine::model::Workbook>,
+    name: String,
+}
+
+struct BoundWorkbook {
+    document_id: String,
+    uid: u64,
+    revision: u64,
+    initial_selection: gridcraft_engine::selection::Selection,
+    initial_sheet: usize,
+    initial_click: Option<(gridcraft_engine::core::CellRef, f64)>,
+    selected: bool,
 }
 
 impl Bridge {
@@ -55,13 +81,26 @@ impl Bridge {
     /// `data-host="page"` on the canvas, an unframed `?host=parent` page (it stays the normal app
     /// with downloads), or a parent on another origin.
     pub fn detect(canvas: &web_sys::HtmlCanvasElement) -> Option<Self> {
-        Some(Self { host: Rc::new(Host::connect(APP, canvas)?), saved: Rc::default() })
+        Some(Self {
+            host: Rc::new(Host::connect(APP, canvas)?),
+            canvas: canvas.clone(),
+            agent: Rc::default(),
+            bound: Rc::default(),
+            pending: Rc::default(),
+            sequence: Rc::default(),
+            titanos: Rc::default(),
+            saved: Rc::default(),
+        })
     }
 
     /// Send saved and exported files to the host instead of downloading them, and hear files
     /// from it.
     pub fn connect(&self, services: &mut Services, inbox: Inbox, ctx: egui::Context) {
+        let wake = ctx.clone();
+        *self.agent.borrow_mut() = CanvasBridge::install(&self.canvas, APP, MAX_OPEN_BYTES as usize, move || wake.request_repaint());
         self.listen(inbox, ctx);
+        let bridge = self.clone();
+        services.save_workbook = Some(Box::new(move |name, bytes, doc| bridge.save_workbook(name, bytes, doc)));
         let bridge = self.clone();
         services.download = Some(Box::new(move |name: &str, bytes: &[u8]| {
             if let Err(e) = bridge.post_save(name, bytes) {
@@ -94,12 +133,105 @@ impl Bridge {
         if let Some(name) = saved.iter().rev().find(|name| is_workbook(name))
             && let Some(doc) = app.session.active_mut()
         {
+            // A handed-off save is not a receipt for the exact source bytes.
+            // Reopening the stored workbook establishes a fresh Agent binding.
+            self.bound.borrow_mut().take();
             doc.saved = doc.wb.clone();
             if doc.path.is_none() {
                 doc.title = name.clone();
             }
         }
+        if let Some(channel) = self.agent.borrow().as_ref() {
+            if let Some(open) = channel.take_open() {
+                self.titanos.set(true);
+                self.pending.borrow_mut().take();
+                let uid = app.open_received_bytes(&open_name(&open.name), &open.bytes);
+                *self.bound.borrow_mut() = uid.and_then(|uid| {
+                    let doc = app.session.active().filter(|doc| doc.uid == uid)?;
+                    Some(BoundWorkbook {
+                        document_id: open.document_id,
+                        uid,
+                        revision: doc.revision,
+                        initial_sheet: doc.sheet_index(),
+                        initial_selection: doc.selection.clone(),
+                        initial_click: app.grid.last_click,
+                        selected: false,
+                    })
+                });
+            }
+            if let Some(failed) = channel.take_failed() {
+                let mut pending = self.pending.borrow_mut();
+                if pending.as_ref().is_some_and(|p| p.ticket == failed) {
+                    pending.take();
+                }
+            }
+            if let Some(saved) = channel.take_saved() {
+                let mut pending = self.pending.borrow_mut();
+                if pending.as_ref().is_some_and(|p| p.ticket == saved.id)
+                    && let Some(written) = pending.take()
+                    && let Some(doc) = app.session.document_mut(written.uid)
+                {
+                    // An acknowledgement stores the emitted model, never edits made while awaiting the host.
+                    doc.saved = written.snapshot;
+                    if doc.path.is_none() {
+                        doc.title = written.name;
+                    }
+                    if let Some(source) = self.bound.borrow_mut().as_mut()
+                        && source.uid == doc.uid
+                        && doc.revision == written.revision
+                        && !doc.is_dirty()
+                        && channel.accept_saved(&saved)
+                    {
+                        source.document_id = saved.document_id;
+                        source.revision = written.revision;
+                    }
+                }
+            }
+            let mut binding = self.bound.borrow_mut();
+            match (binding.as_mut(), app.session.active()) {
+                (Some(source), Some(doc)) if source.uid == doc.uid => {
+                    source.selected |= doc.selection != source.initial_selection
+                        || doc.sheet_index() != source.initial_sheet
+                        || app.grid.last_click != source.initial_click;
+                    channel.answer(Some(&source.document_id), || {
+                        if doc.revision != source.revision || doc.is_dirty() || app.editor.is_some() || app.text_box_editor.is_some() {
+                            return Selection::Dirty;
+                        }
+                        if app.selected_object.is_some() || app.dialog.is_some() || app.backstage.is_some() {
+                            return Selection::Unsupported;
+                        }
+                        if !source.selected {
+                            return Selection::None;
+                        }
+                        let Some(sheet) = doc.wb.active() else {
+                            return Selection::Unsupported;
+                        };
+                        let Some(ranges) = crate::hostmode::selected_ranges(&doc.selection) else {
+                            return Selection::Unsupported;
+                        };
+                        Selection::Selected(ranges.into_iter().map(|range| Region::Cells { sheet: sheet.name.clone(), range }).collect())
+                    });
+                }
+                _ => channel.answer(None, || Selection::Unbound),
+            }
+        }
         self.host.post_dirty(app.session.documents().iter().any(|d| d.is_dirty()));
+    }
+
+    fn save_workbook(&self, path: &str, bytes: &[u8], doc: &gridcraft_engine::DocState) -> Result<(), String> {
+        if !self.titanos.get() {
+            return self.post_save(path, bytes);
+        }
+        if self.pending.borrow().is_some() {
+            return Err("The previous save is awaiting the file window.".into());
+        }
+        let next = self.sequence.get().checked_add(1).ok_or("Save ticket limit reached")?;
+        self.sequence.set(next);
+        let name = file_name(path);
+        let ticket = format!("xlsx-{}-{next}", doc.uid);
+        self.host.post_save(&name, bytes, Some(&ticket), false)?;
+        *self.pending.borrow_mut() = Some(WorkbookSave { ticket, uid: doc.uid, revision: doc.revision, snapshot: doc.wb.clone(), name });
+        Ok(())
     }
 
     fn post_save(&self, path: &str, bytes: &[u8]) -> Result<(), String> {

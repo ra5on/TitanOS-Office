@@ -23,6 +23,7 @@ log = { workspace = true }
 serde_json = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+titanos-agent-selection = { path = "../../../shared/agent-selection" }
 eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit"] }
 rfd = { workspace = true }
 wasm-bindgen = "0.2"
