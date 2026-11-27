@@ -113,7 +113,7 @@ mod state;
 use app::control_click_as_secondary;
 pub(crate) use app::works_without_document;
 pub use clock::now_ms;
-pub use services::{HostSaveFn, Inbox, Services};
+pub use services::{HostDocument, HostSaveFn, Inbox, Services};
 pub use state::{AutoSaveBlock, DefaultApp, SaveChoice, keeps_everything};
 
 /// Web: a save the browser's picker hasn't finished ([`async_saves`]).
@@ -786,6 +786,8 @@ pub struct WordApp {
     /// document is another, [`WordApp::sync_document`] puts that state aside and brings the
     /// other's.
     shown_document: u64,
+    /// Changes on document switches and file intents, including a failed or deferred open.
+    host_view: u64,
     /// The per-document state of the open documents not shown.
     parked: std::collections::HashMap<u64, documents::Parked>,
     /// The open windows ([`windows`]).

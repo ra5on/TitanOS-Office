@@ -101,6 +101,14 @@ pub struct Services {
 /// Files delivered asynchronously.
 pub type Inbox = std::sync::Arc<std::sync::Mutex<Vec<(String, Vec<u8>)>>>;
 
-/// [`Services::host_save`]: `(file name, bytes, save_as)`. An error means the page didn't get
-/// the file, and the save failed.
-pub type HostSaveFn = Box<dyn Fn(&str, &[u8], bool) -> Result<(), String>>;
+/// Identity and revision of the active document when its exact bytes were serialized.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HostDocument {
+    pub document: u64,
+    pub view: u64,
+    pub revision: u64,
+}
+
+/// [`Services::host_save`] receives the name, bytes, Save As intent, and the serialized document
+/// identity for editable saves. A separate export has no document identity. An error fails the save.
+pub type HostSaveFn = Box<dyn Fn(&str, &[u8], bool, Option<HostDocument>) -> Result<(), String>>;

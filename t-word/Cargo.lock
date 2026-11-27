@@ -5535,6 +5535,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
+name = "titanos-agent-selection"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "tls_codec"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7105,10 +7114,12 @@ dependencies = [
  "log",
  "rfd",
  "serde_json",
+ "titanos-agent-selection",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
  "wordcraft-doc",
+ "wordcraft-docx",
  "wordcraft-engine",
  "wordcraft-fonts",
  "wordcraft-ui-egui",

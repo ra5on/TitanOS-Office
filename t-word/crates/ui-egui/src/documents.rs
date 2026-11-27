@@ -22,6 +22,17 @@ pub(crate) struct Parked {
 }
 
 impl WordApp {
+    /// Identifies the active serialized document and the view in which it was opened.
+    pub fn host_document(&self) -> crate::HostDocument {
+        crate::HostDocument { document: self.session.document_id(), view: self.host_view, revision: self.session.rev() }
+    }
+
+    /// Includes edits that have yet to reach the document model and unconfirmed host saves.
+    pub fn host_selection_dirty(&self) -> bool {
+        let id = self.session.document_id();
+        self.document_unsaved_by_id(id) || self.document_has_comment_drafts(id) || !self.canvas.ime_preedit.is_empty()
+    }
+
     /// Replace the document the window opened with before anything else happens (the first blank
     /// document, made again on the region File › Options chose): the session's document is
     /// swapped and the window follows it at once. Replacing it with `session.set_document`
@@ -53,6 +64,7 @@ impl WordApp {
         if self.windows.native() && self.follow_in_windows(id) {
             return;
         }
+        self.host_view = self.host_view.wrapping_add(1);
         let left = std::mem::replace(&mut self.shown_document, id);
         let seen = self.carry_document_state(left, id);
         self.window_shows(id);

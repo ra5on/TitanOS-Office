@@ -4441,7 +4441,7 @@ fn host_app(fail: bool) -> (WordApp, std::rc::Rc<std::cell::RefCell<Vec<(String,
     let got = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
     let seen = got.clone();
     a.services.download = Some(Box::new(|_, _| Err("downloads go to the host page".into())));
-    a.services.host_save = Some(Box::new(move |name: &str, bytes: &[u8], save_as: bool| {
+    a.services.host_save = Some(Box::new(move |name: &str, bytes: &[u8], save_as: bool, _document| {
         if fail {
             return Err("the page is gone".into());
         }
