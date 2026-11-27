@@ -72,3 +72,9 @@ cd t-pdf/apps/pdfcraft-web && trunk build --release
 ## Weiterentwicklung
 
 Als Nächstes kommt die direkte Anbindung an TitanOS (PLAN 75-18): Öffnen und Speichern über die Datei-API, die Dateiauswahl von TitanOS statt des Browser-Dialogs, Speichern ohne Download und zuletzt geöffnete Dateien. Bis dahin gelten die Anbindung und das Verhalten der Originale.
+
+## Haftungsausschluss
+
+Die T-Programme gehören zu TitanOS, einem privaten, nicht kommerziellen Projekt. Es wird kostenlos und ohne Gewähr bereitgestellt, die Nutzung geschieht auf eigenes Risiko. RAID und Snapshots ersetzen keine Datensicherung. Den vollständigen Hinweis auf Deutsch und Englisch enthält [DISCLAIMER.md](DISCLAIMER.md).
+
+*Part of TitanOS, a private, non-commercial project, provided free of charge and without warranty; use it at your own risk. See [DISCLAIMER.md](DISCLAIMER.md).*
