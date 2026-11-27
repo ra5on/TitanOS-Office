@@ -21,22 +21,7 @@ impl BoundDocument {
     /// Keep the ticket attached to this open call, through the native parser.
     /// A prompt or an already-open namesake doesn't identify these exact bytes.
     pub fn open(app: &mut WordApp, ticket: String, name: &str, bytes: &[u8]) -> Option<Self> {
-        let info = app
-            .run(
-                "file.open",
-                serde_json::json!({
-                    "path": name, "data": wordcraft_engine::cmd::insert::base64_encode(bytes)
-                }),
-            )
-            .ok()?;
-        let stamp = app.host_document();
-        if info.get("id").and_then(serde_json::Value::as_u64) != Some(stamp.document)
-            || info.get("alreadyOpen").and_then(serde_json::Value::as_bool) != Some(false)
-            || !app.has_document()
-        {
-            return None;
-        }
-        app.ui.backstage = false;
+        let stamp = app.receive_host_document(name, bytes)?;
         Some(Self::new(ticket, stamp, source(name, bytes)))
     }
 
@@ -150,6 +135,14 @@ mod tests {
         app.session.dirty = false;
         assert!(BoundDocument::open(&mut app, "broken".into(), "Vertrag.docx", b"unreadable").is_none());
         assert_eq!(b.selection(&app), Selection::Unbound);
+    }
+
+    #[test]
+    fn a_recipient_list_keeps_native_open_behavior_and_never_claims_a_document_ticket() {
+        let mut app = WordApp::new(Session::new(Document::new()), Default::default());
+        let original = app.host_document();
+        assert!(BoundDocument::open(&mut app, "contacts".into(), "Empfaenger.csv", b"Name,Ort\nBeispiel,Berlin").is_none());
+        assert_eq!(app.host_document().document, original.document);
     }
 
     #[test]
