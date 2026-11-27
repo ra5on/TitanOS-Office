@@ -103,11 +103,17 @@ impl CanvasBridge {
             repaint();
         })?;
         bridge.listen("save", |inner, event| {
-            inner.open.borrow_mut().take();
             inner
                 .binding
                 .borrow_mut()
                 .begin_save(prop(&event.detail(), "id").as_string());
+        })?;
+        let repaint = wake.clone();
+        bridge.listen("save-failed", move |inner, event| {
+            if let Some(id) = prop(&event.detail(), "id").as_string() {
+                inner.binding.borrow_mut().failed(id);
+                repaint();
+            }
         })?;
         let repaint = wake.clone();
         bridge.listen("saved", move |inner, event| {
@@ -158,6 +164,9 @@ impl CanvasBridge {
             .ok()?;
         self.0.listeners.borrow_mut().push((name, listener));
         Some(())
+    }
+    pub fn take_failed(&self) -> Option<String> {
+        self.0.binding.borrow_mut().take_failed()
     }
     pub fn take_saved(&self) -> Option<HostSaved> {
         self.0.binding.borrow_mut().take_saved()

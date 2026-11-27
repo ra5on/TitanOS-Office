@@ -45,6 +45,7 @@ mod binding {
         current: Option<String>,
         request: Option<(String, String)>,
         saving: Option<String>,
+        failed: Option<String>,
         saved: Option<HostSaved>,
         offered: Option<HostSaved>,
     }
@@ -58,12 +59,25 @@ mod binding {
             self.current = ticket;
             self.request = None;
             self.saving = None;
+            self.failed = None;
             self.saved = None;
             self.offered = None;
         }
         pub fn begin_save(&mut self, ticket: Option<String>) {
+            let Some(id) = ticket.filter(|s| !s.is_empty() && s.len() <= 128) else {
+                return;
+            };
             self.open(None);
-            self.saving = ticket.filter(|s| !s.is_empty() && s.len() <= 128);
+            self.saving = Some(id);
+        }
+        pub fn failed(&mut self, id: String) {
+            if self.saving.as_deref() == Some(&id) {
+                self.saving = None;
+                self.failed = Some(id);
+            }
+        }
+        pub fn take_failed(&mut self) -> Option<String> {
+            self.failed.take()
         }
         pub fn saved(&mut self, id: String, document_id: String) {
             if token(&document_id) && self.saving.as_deref() == Some(&id) {
@@ -154,6 +168,17 @@ mod binding {
         fn save_needs_matching_write_ack_and_explicit_native_confirmation() {
             let mut b = Binding::default();
             b.open(Some(DOC.into()));
+            b.begin_save(None); // Exporting a separate copy does not replace the source.
+            b.request(REQ.into(), DOC.into());
+            assert_eq!(
+                b.take(Some(DOC), || Selection::None).unwrap().2,
+                Selection::None
+            );
+            b.begin_save(Some("failed".into()));
+            b.failed("other".into());
+            assert!(b.take_failed().is_none());
+            b.failed("failed".into());
+            assert_eq!(b.take_failed().as_deref(), Some("failed"));
             b.begin_save(Some("save1".into()));
             b.saved("other".into(), DOC.into());
             assert!(b.take_saved().is_none());
