@@ -28,6 +28,10 @@ impl WordApp {
     /// Close, Envelopes, Labels and Finish & Merge on a document with unsaved changes first ask
     /// Save / Don't Save / Cancel, and the command runs once that is answered (`ui.saveChanges`).
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        // A failed, cancelled or password-protected open is still a new intent.
+        if matches!(id, "file.open" | "file.new" | "file.close") {
+            self.host_view = self.host_view.wrapping_add(1);
+        }
         // Comment text still being typed is written first, so a save or export has it and a
         // close, New or Open counts it as a change (#1348). A draft the document refuses is not
         // part of it: saving and exporting go on without it (the refusal stays on the status
@@ -174,7 +178,7 @@ impl WordApp {
             let opened_name = self.session.path.as_ref().and_then(|p| p.file_name()).map(|n| n.to_string_lossy().to_string());
             let new_file = id == "file.saveAs" || opened_name.as_deref() != Some(name.as_str());
             let delivered = match (&self.services.host_save, &self.services.download) {
-                (Some(host), _) => host(&name, &bytes, marked_saved && new_file),
+                (Some(host), _) => host(&name, &bytes, marked_saved && new_file, marked_saved.then(|| self.host_document())),
                 (None, Some(download)) => download(&name, &bytes),
                 (None, None) => Ok(()),
             };

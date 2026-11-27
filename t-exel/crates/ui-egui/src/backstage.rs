@@ -778,13 +778,7 @@ pub fn export_as(app: &mut SheetApp, fmt: &str) -> bool {
         Ok(r) => {
             let bytes = r.get("base64").and_then(Json::as_str).and_then(gridcraft_engine::io::base64_decode);
             let name = r.get("name").and_then(Json::as_str).map_or_else(|| format!("{stem}.{fmt}"), str::to_string);
-            match (bytes, &app.services.download) {
-                (Some(b), Some(dl)) => {
-                    dl(&name, &b);
-                    true
-                }
-                _ => false,
-            }
+            bytes.is_some_and(|b| app.deliver_download(&name, &b, fmt == "xlsx"))
         }
         Err(e) => {
             app.message = Some(("T-Exel".into(), crate::clean_error(&e)));

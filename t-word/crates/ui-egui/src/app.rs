@@ -182,6 +182,7 @@ impl WordApp {
             file_dialog,
             info_editing,
             shown_document,
+            host_view: 0,
             #[cfg(not(target_arch = "wasm32"))]
             file_browser,
         }

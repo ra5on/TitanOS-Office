@@ -57,8 +57,17 @@ const MAX_AUTHOR_CHARS: usize = 256;
 #[derive(Clone)]
 pub struct Bridge {
     host: Rc<Host>,
+    selection: Option<titanos_agent_selection::CanvasBridge>,
+    // A filename can be opened twice; the actual presentation and content must still match.
+    bound: Rc<RefCell<Option<BoundSlideDeck>>>,
     /// Files the host sent (the name, if it sent one), waiting for the next frame.
     opened: Rc<RefCell<Vec<(Option<String>, Vec<u8>)>>>,
+}
+
+struct BoundSlideDeck {
+    ticket: String,
+    uid: u64,
+    content: std::sync::Weak<deckcraft_engine::model::Presentation>,
 }
 
 impl Bridge {
@@ -71,12 +80,16 @@ impl Bridge {
         if host.mode() == craft_web_host::Mode::Parent && web_sys::window()?.location().origin().ok()? == "null" {
             return None;
         }
-        Some(Self { host: Rc::new(host), opened: Rc::default() })
+        Some(Self { host: Rc::new(host), opened: Rc::default(), selection: None, bound: Rc::default() })
     }
 
     /// Hand saved and exported files to the host instead of downloading them, and hear the files
     /// it sends.
-    pub fn connect(&self, services: &mut Services, ctx: egui::Context) {
+    pub fn connect(&mut self, services: &mut Services, ctx: egui::Context, canvas: &web_sys::HtmlCanvasElement) {
+        if self.host.mode() != craft_web_host::Mode::Parent {
+            let repaint = ctx.clone();
+            self.selection = titanos_agent_selection::CanvasBridge::install(canvas, APP, i32::MAX as usize, move || repaint.request_repaint());
+        }
         self.listen(ctx);
         let bridge = self.clone();
         services.host_save = Some(Box::new(move |name: &str, bytes: &[u8], save_as: bool| bridge.post_save(name, bytes, save_as)));
@@ -108,6 +121,15 @@ impl Bridge {
 
     /// Before each frame: open the files the host sent.
     pub fn open_files(&self, app: &mut SlideApp) {
+        if let Some(file) = self.selection.as_ref().and_then(|s| s.take_open()) {
+            let old = app.session.active().map(|d| d.uid);
+            app.open_from_host(Some(&file.name), &file.bytes);
+            *self.bound.borrow_mut() = app
+                .session
+                .active()
+                .filter(|d| Some(d.uid) != old && d.path.as_deref() == Some(&file.name))
+                .map(|d| BoundSlideDeck { ticket: file.document_id, uid: d.uid, content: std::sync::Arc::downgrade(&d.doc) });
+        }
         let opened = std::mem::take(&mut *self.opened.borrow_mut());
         for (name, bytes) in opened {
             app.open_from_host(name.as_deref(), &bytes);
@@ -118,6 +140,29 @@ impl Bridge {
     /// repeat a state it already reported).
     pub fn report_dirty(&self, app: &SlideApp) {
         self.host.post_dirty(app.session.documents().iter().any(|d| d.is_dirty()));
+        if let Some(bridge) = &self.selection {
+            use titanos_agent_selection::{Region, Selection};
+            let bound = self.bound.borrow();
+            let pair = bound.as_ref().zip(app.session.active()).filter(|(b, d)| b.uid == d.uid);
+            bridge.answer(pair.map(|(b, _)| b.ticket.as_str()), || {
+                let Some((b, d)) = pair else { return Selection::Unbound };
+                if d.is_dirty() {
+                    return Selection::Dirty;
+                }
+                if !b.content.ptr_eq(&std::sync::Arc::downgrade(&d.doc)) {
+                    return Selection::Unbound;
+                }
+                let selection = &d.selection;
+                if selection.target != deckcraft_engine::Target::Slides
+                    || selection.text.is_some()
+                    || !selection.shapes.is_empty()
+                    || selection.cells.is_some()
+                {
+                    return Selection::None;
+                }
+                Selection::numbered(selection.slides.iter().map(|id| d.doc.slide_index(*id)), Region::Slide)
+            });
+        }
     }
 
     fn post_save(&self, path: &str, bytes: &[u8], save_as: bool) -> Result<(), String> {

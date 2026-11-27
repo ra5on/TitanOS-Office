@@ -59,6 +59,15 @@ fn main() {
                         {
                             app.comment_prefs.author = author.chars().take(200).collect();
                         }
+                        if bridge.page_mode()
+                            && let Some(canvas) = app_canvas()
+                        {
+                            let ctx = cc.egui_ctx.clone();
+                            app.host_selection =
+                                pdfcraft_ui_egui::CanvasBridge::install(&canvas, "pdfcraft", host::MAX_OPEN_BYTES as usize, move || {
+                                    ctx.request_repaint()
+                                });
+                        }
                         bridge.listen(app.startup_inbox.clone(), cc.egui_ctx.clone());
                         app.host_save = Some(bridge.save_fn());
                         app.host_dirty = Some(bridge.dirty_fn());
@@ -152,7 +161,7 @@ mod host {
     const DEFAULT_NAME: &str = "document.pdf";
 
     /// The largest file the host may hand over to open, checked before it is copied (the app's own readers have their own limits).
-    const MAX_OPEN_BYTES: u64 = 512 << 20;
+    pub(super) const MAX_OPEN_BYTES: u64 = 512 << 20;
 
     #[derive(Clone)]
     pub struct Bridge {
@@ -166,6 +175,10 @@ mod host {
         /// without an error while the document showed as saved, #2167).
         pub fn connect(canvas: &web_sys::HtmlCanvasElement) -> Option<Self> {
             Some(Self { host: Rc::new(Host::connect(APP, canvas)?) })
+        }
+
+        pub fn page_mode(&self) -> bool {
+            self.host.mode() != craft_web_host::Mode::Parent
         }
 
         pub fn post_ready(&self) {

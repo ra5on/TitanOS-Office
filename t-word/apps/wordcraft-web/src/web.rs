@@ -103,7 +103,7 @@ pub fn start() {
                         crate::host::Bridge::set_author(&mut app, &author);
                         prefs.keep_own_author(&app.session.author, &own);
                     }
-                    Ok(Box::new(WebShell { app, inbox, messages, prefs }))
+                    Ok(Box::new(WebShell { app, inbox, messages, prefs, bridge: app_bridge.clone() }))
                 }),
             )
             .await;
@@ -134,6 +134,7 @@ fn query_param(key: &str) -> Option<String> {
 /// Wraps the app to read dropped files asynchronously (browsers can't read them synchronously)
 /// and feed them through the inbox.
 struct WebShell {
+    bridge: Option<crate::host::Bridge>,
     app: WordApp,
     inbox: Inbox,
     messages: Rc<RefCell<Vec<String>>>,
@@ -157,6 +158,9 @@ impl eframe::App for WebShell {
         let msgs = std::mem::take(&mut *self.messages.borrow_mut());
         for msg in msgs {
             self.app.status(msg);
+        }
+        if let Some(bridge) = &self.bridge {
+            bridge.begin_frame(&mut self.app);
         }
         self.app.logic(ctx);
         // Store changed preferences straight away: a reload or closed tab runs no exit code (#2132).
@@ -201,6 +205,9 @@ impl eframe::App for WebShell {
             }
         }
         self.app.ui(ui);
+        if let Some(bridge) = &self.bridge {
+            bridge.after_input(&self.app);
+        }
     }
 }
 

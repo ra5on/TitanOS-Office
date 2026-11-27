@@ -30,10 +30,15 @@
 //! to the host rather than downloaded, the host guards leaving the page, and `?author=` names the
 //! user for comments and tracked changes.
 
+use crate::agent::{self, BoundDocument};
+use std::cell::RefCell;
 use std::rc::Rc;
+use titanos_agent_selection::CanvasBridge;
+use wordcraft_docx::SavedParagraphs;
+use wordcraft_ui_egui::async_saves::{AsyncSaves, SaveOutcome};
 
 use craft_web_host::web::{FileData, Host, Message};
-use wordcraft_ui_egui::{Inbox, Services, WordApp};
+use wordcraft_ui_egui::{HostDocument, Inbox, Services, WordApp};
 
 /// The app id in the host messages (`wordcraft:ready`).
 const APP: &str = "wordcraft";
@@ -50,6 +55,24 @@ const MAX_AUTHOR_CHARS: usize = 200;
 #[derive(Clone)]
 pub struct Bridge {
     host: Rc<Host>,
+    canvas: web_sys::HtmlCanvasElement,
+    agent: Rc<RefCell<AgentState>>,
+}
+
+#[derive(Default)]
+struct AgentState {
+    bridge: Option<CanvasBridge>,
+    bound: Option<BoundDocument>,
+    pending: Option<SaveTicket>,
+    scoped_host: bool,
+    saves: AsyncSaves,
+}
+
+struct SaveTicket {
+    ui_ticket: u64,
+    id: String,
+    native: HostDocument,
+    source: Option<SavedParagraphs>,
 }
 
 impl Bridge {
@@ -57,20 +80,22 @@ impl Bridge {
     /// `data-host="page"` on the canvas, an unframed `?host=parent` page (it stays the normal app
     /// with downloads), or a parent on another origin.
     pub fn detect(canvas: &web_sys::HtmlCanvasElement) -> Option<Self> {
-        Some(Self { host: Rc::new(Host::connect(APP, canvas)?) })
+        Some(Self { host: Rc::new(Host::connect(APP, canvas)?), canvas: canvas.clone(), agent: Default::default() })
     }
 
     /// Hand saved and exported files to the host instead of downloading them, report unsaved
     /// changes to it, and hear the files it sends.
     pub fn connect(&self, services: &mut Services, inbox: Inbox, ctx: egui::Context) {
+        let wake = ctx.clone();
+        self.agent.borrow_mut().bridge = CanvasBridge::install(&self.canvas, APP, MAX_OPEN_BYTES as usize, move || wake.request_repaint());
         self.listen(inbox, ctx);
         let bridge = self.clone();
-        services.host_save = Some(Box::new(move |name: &str, bytes: &[u8], save_as: bool| bridge.post_save(name, bytes, save_as)));
+        services.host_save = Some(Box::new(move |name: &str, bytes: &[u8], save_as: bool, native| bridge.post_save(name, bytes, save_as, native)));
         // Anything else that would download goes to the host too.
         let bridge = self.clone();
-        services.download = Some(Box::new(move |name: &str, bytes: &[u8]| bridge.post_save(name, bytes, false)));
-        // The browser's save picker is never used, so no save finishes later.
-        services.async_saves = None;
+        services.download = Some(Box::new(move |name: &str, bytes: &[u8]| bridge.post_save(name, bytes, false, None)));
+        // NAS saves remain pending until this exact ticket receives a receipt.
+        services.async_saves = Some(self.agent.borrow().saves.clone());
         // The crate does not repeat a state it already reported.
         let host = self.host.clone();
         services.on_dirty = Some(Box::new(move |dirty: bool| host.post_dirty(dirty)));
@@ -93,9 +118,79 @@ impl Bridge {
         let _ = self.host.post_failed(error, None);
     }
 
-    fn post_save(&self, path: &str, bytes: &[u8], save_as: bool) -> Result<(), String> {
+    fn post_save(&self, path: &str, bytes: &[u8], save_as: bool, native: Option<HostDocument>) -> Result<(), String> {
         let name = std::path::Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.to_string());
-        self.host.post_save(&name, bytes, None, save_as)
+        let (ticket, save_as) = {
+            let mut state = self.agent.borrow_mut();
+            let Some(native) = native.filter(|_| state.bridge.is_some()) else {
+                return self.host.post_save(&name, bytes, None, save_as);
+            };
+            // Keep ordinary page hosts that never sent a NAS ticket on their
+            // historical save path. Agent data is bound only after a real HostOpen.
+            if !state.scoped_host {
+                return self.host.post_save(&name, bytes, None, save_as);
+            }
+            if state.pending.is_some() {
+                return Err("The previous document save is still awaiting its host acknowledgement.".to_owned());
+            }
+            let ui_ticket = state.saves.start();
+            let id = format!("word-{}-{}-{}", native.document, native.view, ui_ticket);
+            let replace = state.bound.as_ref().is_some_and(|bound| bound.same_view(native));
+            state.pending = Some(SaveTicket { ui_ticket, id: id.clone(), native, source: agent::source(&name, bytes) });
+            (id, save_as || !replace)
+        };
+        let result = self.host.post_save(&name, bytes, Some(&ticket), save_as);
+        if let Err(err) = &result {
+            let mut state = self.agent.borrow_mut();
+            if let Some(save) = state.pending.take() {
+                state.saves.finish(save.ui_ticket, SaveOutcome::Failed(err.clone()));
+            }
+        }
+        result
+    }
+
+    pub fn begin_frame(&self, app: &mut WordApp) {
+        let Some(canvas) = self.agent.borrow().bridge.clone() else {
+            return;
+        };
+        if let Some(open) = canvas.take_open() {
+            {
+                let mut state = self.agent.borrow_mut();
+                state.scoped_host = true;
+                state.bound = None;
+                if let Some(save) = state.pending.take() {
+                    state.saves.finish(save.ui_ticket, SaveOutcome::Cancelled);
+                }
+            }
+            self.agent.borrow_mut().bound = BoundDocument::open(app, open.document_id, &open.name, &open.bytes);
+        }
+        if let Some(id) = canvas.take_failed() {
+            let mut state = self.agent.borrow_mut();
+            if state.pending.as_ref().is_some_and(|save| save.id == id)
+                && let Some(save) = state.pending.take()
+            {
+                state.saves.finish(save.ui_ticket, SaveOutcome::Failed("The host could not save the document.".to_owned()));
+            }
+        }
+        if let Some(saved) = canvas.take_saved() {
+            let mut state = self.agent.borrow_mut();
+            if state.pending.as_ref().is_some_and(|save| save.id == saved.id)
+                && let Some(save) = state.pending.take()
+            {
+                state.saves.finish(save.ui_ticket, SaveOutcome::Saved);
+                if save.native == app.host_document() && app.has_document() && !app.session.dirty && canvas.accept_saved(&saved) {
+                    state.bound = Some(BoundDocument::new(saved.document_id, save.native, save.source));
+                }
+            }
+        }
+    }
+
+    pub fn after_input(&self, app: &WordApp) {
+        let state = self.agent.borrow();
+        if let Some(canvas) = &state.bridge {
+            let bound = state.bound.as_ref().filter(|bound| bound.same_view(app.host_document()));
+            canvas.answer(bound.map(|b| b.ticket.as_str()), || bound.map_or(titanos_agent_selection::Selection::Unbound, |b| b.selection(app)));
+        }
     }
 
     /// Hear `wordcraft:open` and queue the file like a dropped one.
