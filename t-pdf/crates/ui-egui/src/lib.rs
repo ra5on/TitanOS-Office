@@ -75,6 +75,9 @@ pub use workflows::ocr_verify::{OcrVerify, Phase};
 
 mod app;
 mod hooks;
+#[cfg(target_arch = "wasm32")]
+pub use titanos_agent_selection::CanvasBridge;
+
 mod persist;
 mod platform;
 mod state;
@@ -473,6 +476,10 @@ pub struct PdfCraftApp {
     pub host_save: Option<HostSaveFn>,
     /// Reports unsaved work to the embedding page (web, see [`HostDirtyFn`]).
     pub host_dirty: Option<HostDirtyFn>,
+    #[cfg(target_arch = "wasm32")]
+    pub host_selection: Option<CanvasBridge>,
+    #[cfg(target_arch = "wasm32")]
+    host_document: Option<(DocId, u64, String)>,
     /// A pending "save changes?" question (closing a dirty tab or quitting).
     pub close_request: Option<CloseRequest>,
     /// The button of the "save changes?" question the keyboard has chosen; Save when it opens.

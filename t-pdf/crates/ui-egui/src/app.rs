@@ -12,6 +12,8 @@ mod commands;
 mod control;
 mod files;
 mod frame;
+#[cfg(target_arch = "wasm32")]
+mod host_selection;
 mod input;
 mod keys;
 mod links;
@@ -179,6 +181,10 @@ impl PdfCraftApp {
             os_events: None,
             host_save: None,
             host_dirty: None,
+            #[cfg(target_arch = "wasm32")]
+            host_selection: None,
+            #[cfg(target_arch = "wasm32")]
+            host_document: None,
             close_request: None,
             save_prompt_button: Default::default(),
             save_prompt_seen: false,
@@ -544,6 +550,8 @@ impl eframe::App for PdfCraftApp {
             && self.pending_link.is_none()
             && self.pending_remote_link.is_none()
         {
+            #[cfg(target_arch = "wasm32")]
+            self.take_host_open();
             let startup = self.startup_inbox.lock().map(|mut q| std::mem::take(&mut *q)).unwrap_or_default();
             for (name, bytes) in startup {
                 let activate = !self.startup_superseded;
@@ -648,6 +656,8 @@ impl eframe::App for PdfCraftApp {
         self.attend_save_prompt(ctx);
         self.sync_native_menu(ctx);
         self.sync_titles(ctx);
+        #[cfg(target_arch = "wasm32")]
+        self.answer_host_selection();
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
